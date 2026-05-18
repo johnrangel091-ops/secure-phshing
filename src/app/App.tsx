@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Lock, AlertTriangle, CheckCircle, XCircle, Activity, Globe, Server, Database, Settings as SettingsIcon } from 'lucide-react';
+import { Shield, Lock, AlertTriangle, CheckCircle, XCircle, Activity, Globe, Server, Database, Settings as SettingsIcon, LogOut } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { LoginForm } from './components/LoginForm';
 import { StatsCards } from './components/StatsCards';
@@ -7,6 +7,7 @@ import { LinkHistory } from './components/LinkHistory';
 import { SecurityTips } from './components/SecurityTips';
 import { BlockedList } from './components/BlockedList';
 import { Settings } from './components/Settings';
+import { AuthProvider, useAuth } from '../lib/supabase/auth-context';
 
 interface AnalysisResult {
   id: number;
@@ -17,8 +18,8 @@ interface AnalysisResult {
   color: string;
 }
 
-export default function App() {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+function AppContent() {
+  const { user, isLoading: authLoading, signOut } = useAuth();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [url, setUrl] = useState('');
   const [isScanning, setIsScanning] = useState(false);
@@ -289,19 +290,28 @@ export default function App() {
     setIsDarkMode(isDark);
   };
 
-  const handleLogin = () => {
-    setIsLoggedIn(true);
-  };
-
-  const handleLogout = () => {
-    setIsLoggedIn(false);
+  const handleLogout = async () => {
+    await signOut();
     setActiveSection('dashboard');
     setShowResults(false);
     setCurrentResult(null);
   };
 
-  if (!isLoggedIn) {
-    return <LoginForm onLogin={handleLogin} />;
+  // Show loading screen while checking auth
+  if (authLoading) {
+    return (
+      <div className="min-h-screen bg-[#050505] flex items-center justify-center">
+        <div className="text-center">
+          <Shield className="w-16 h-16 text-cyan-400 mx-auto mb-4 animate-pulse" />
+          <p className="text-gray-400">Cargando...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show login form if not authenticated
+  if (!user) {
+    return <LoginForm />;
   }
 
   return (
@@ -748,5 +758,14 @@ export default function App() {
         }
       `}</style>
     </div>
+  );
+}
+
+// Wrap the app with AuthProvider
+export default function App() {
+  return (
+    <AuthProvider>
+      <AppContent />
+    </AuthProvider>
   );
 }

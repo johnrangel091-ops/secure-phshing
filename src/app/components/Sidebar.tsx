@@ -1,5 +1,6 @@
 import { LayoutDashboard, History, Database, Settings, LogOut } from 'lucide-react';
 import { Logo } from './Logo';
+import { useAuth } from '../../lib/supabase/auth-context';
 
 interface SidebarProps {
   activeSection: string;
@@ -8,6 +9,8 @@ interface SidebarProps {
 }
 
 export function Sidebar({ activeSection, onNavigate, onLogout }: SidebarProps) {
+  const { user } = useAuth();
+  
   const menuItems = [
     { id: 'dashboard', label: 'Panel Principal', icon: LayoutDashboard },
     { id: 'history', label: 'Historial de Análisis', icon: History },
@@ -57,11 +60,15 @@ export function Sidebar({ activeSection, onNavigate, onLogout }: SidebarProps) {
       {/* User Profile & Logout */}
       <div className="p-4 border-t border-cyan-500/20">
         <div className="flex items-center gap-3 mb-3 p-3 bg-white/5 rounded-xl">
-          <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-pink-500 rounded-full flex items-center justify-center">
-            <span className="font-bold text-white text-sm">JD</span>
+          <div className="w-10 h-10 bg-gradient-to-br from-cyan-500 to-blue-600 rounded-full flex items-center justify-center">
+            <span className="font-bold text-white text-sm">
+              {user?.email?.charAt(0).toUpperCase() || 'U'}
+            </span>
           </div>
-          <div className="flex-1">
-            <p className="text-white text-sm font-medium">John Doe</p>
+          <div className="flex-1 min-w-0">
+            <p className="text-white text-sm font-medium truncate">
+              {user?.email || 'Usuario'}
+            </p>
             <p className="text-gray-500 text-xs">Pro Plan</p>
           </div>
         </div>
@@ -70,7 +77,7 @@ export function Sidebar({ activeSection, onNavigate, onLogout }: SidebarProps) {
           className="w-full flex items-center gap-2 px-4 py-2 text-red-400 hover:text-red-300 hover:bg-red-500/10 rounded-lg transition-all duration-300"
         >
           <LogOut className="w-4 h-4" />
-          <span className="text-sm">Cerrar Sesión</span>
+          <span className="text-sm">Cerrar Sesion</span>
         </button>
       </div>
     </aside>
