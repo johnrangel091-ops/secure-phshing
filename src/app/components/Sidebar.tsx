@@ -22,7 +22,7 @@ export function Sidebar({ activeSection, onNavigate, onLogout }: SidebarProps) {
         <div className="flex items-center gap-3">
           <Logo className="w-12 h-12" />
           <div>
-            <h2 className="font-bold text-white">PhishGuard</h2>
+            <h2 className="font-bold text-white">PhshiingSecureJD</h2>
             <p className="text-xs text-cyan-400">Enterprise</p>
           </div>
         </div>
