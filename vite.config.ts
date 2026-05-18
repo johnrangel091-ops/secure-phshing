@@ -30,6 +30,12 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  define: {
+    // Expose NEXT_PUBLIC env vars as VITE env vars for compatibility
+    'import.meta.env.VITE_SUPABASE_URL': JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_URL),
+    'import.meta.env.VITE_SUPABASE_ANON_KEY': JSON.stringify(process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY),
+    'import.meta.env.VITE_DEV_SUPABASE_REDIRECT_URL': JSON.stringify(process.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL),
+  },
 
   // File types to support raw imports. Never add .css, .tsx, or .ts files to this.
   assetsInclude: ['**/*.svg', '**/*.csv'],
