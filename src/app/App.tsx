@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Shield, Lock, AlertTriangle, CheckCircle, Activity, Globe, Server, Database, Settings as SettingsIcon } from 'lucide-react';
+import { Shield, Lock, AlertTriangle, CheckCircle, XCircle, Activity, Globe, Server, Database, Settings as SettingsIcon } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { LoginForm } from './components/LoginForm';
 import { StatsCards } from './components/StatsCards';
@@ -54,6 +54,183 @@ export default function App() {
     localStorage.setItem('phishguard_blocked', JSON.stringify(blockedList));
   }, [blockedList]);
 
+  // Lista de dominios seguros conocidos
+  const safeDomains = [
+    'google.com', 'facebook.com', 'twitter.com', 'instagram.com', 'linkedin.com',
+    'youtube.com', 'amazon.com', 'microsoft.com', 'apple.com', 'netflix.com',
+    'github.com', 'stackoverflow.com', 'reddit.com', 'wikipedia.org', 'yahoo.com',
+    'outlook.com', 'live.com', 'office.com', 'dropbox.com', 'spotify.com',
+    'twitch.tv', 'paypal.com', 'ebay.com', 'walmart.com', 'target.com',
+    'bestbuy.com', 'adobe.com', 'salesforce.com', 'zoom.us', 'slack.com',
+    'vercel.com', 'notion.so', 'figma.com', 'canva.com', 'trello.com'
+  ];
+
+  // Palabras clave sospechosas comunes en phishing
+  const suspiciousKeywords = [
+    'login', 'signin', 'sign-in', 'account', 'verify', 'verification', 'update',
+    'secure', 'security', 'bank', 'banco', 'banking', 'password', 'credential',
+    'suspend', 'suspended', 'locked', 'unlock', 'confirm', 'confirmation',
+    'urgent', 'alert', 'warning', 'winner', 'prize', 'reward', 'free', 'gift',
+    'click', 'support', 'soporte', 'help', 'helpdesk', 'service', 'customer',
+    'wallet', 'crypto', 'bitcoin', 'payment', 'pago', 'invoice', 'factura',
+    'actualizar', 'verificar', 'seguridad', 'contraseña', 'cuenta'
+  ];
+
+  // Extensiones de dominio sospechosas
+  const suspiciousExtensions = [
+    '.xyz', '.top', '.club', '.info', '.online', '.site', '.website', '.tk',
+    '.ml', '.ga', '.cf', '.gq', '.pw', '.cc', '.ws', '.buzz', '.work'
+  ];
+
+  // Funcion para analizar la URL y detectar phishing
+  const analyzeUrlForPhishing = (inputUrl: string): { score: number; risk: string; color: string; reasons: string[] } => {
+    const reasons: string[] = [];
+    let dangerScore = 0;
+
+    // Normalizar URL
+    let normalizedUrl = inputUrl.toLowerCase().trim();
+    if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
+      normalizedUrl = 'https://' + normalizedUrl;
+    }
+
+    let hostname = '';
+    let pathname = '';
+    try {
+      const urlObj = new URL(normalizedUrl);
+      hostname = urlObj.hostname;
+      pathname = urlObj.pathname + urlObj.search;
+    } catch {
+      // URL invalida
+      reasons.push('URL con formato invalido o sospechoso');
+      dangerScore += 30;
+      hostname = normalizedUrl;
+    }
+
+    // 1. Verificar si es un dominio seguro conocido
+    const isSafeDomain = safeDomains.some(safe => {
+      return hostname === safe || hostname === 'www.' + safe || hostname.endsWith('.' + safe);
+    });
+
+    if (isSafeDomain) {
+      return {
+        score: 95,
+        risk: 'Seguro',
+        color: 'emerald',
+        reasons: ['Dominio verificado y confiable']
+      };
+    }
+
+    // 2. Verificar subdominios excesivos (mas de 3 puntos)
+    const subdomainCount = (hostname.match(/\./g) || []).length;
+    if (subdomainCount > 2) {
+      reasons.push('Multiples subdominios sospechosos detectados');
+      dangerScore += 25;
+    }
+
+    // 3. Verificar palabras clave sospechosas en el dominio o ruta
+    const fullUrl = hostname + pathname;
+    const foundKeywords: string[] = [];
+    suspiciousKeywords.forEach(keyword => {
+      if (fullUrl.includes(keyword)) {
+        foundKeywords.push(keyword);
+      }
+    });
+
+    if (foundKeywords.length > 0) {
+      reasons.push(`Palabras clave sospechosas: ${foundKeywords.slice(0, 3).join(', ')}`);
+      dangerScore += Math.min(foundKeywords.length * 10, 40);
+    }
+
+    // 4. Verificar extension de dominio sospechosa
+    const hasSuspiciousExtension = suspiciousExtensions.some(ext => hostname.endsWith(ext));
+    if (hasSuspiciousExtension) {
+      reasons.push('Extension de dominio de alto riesgo');
+      dangerScore += 20;
+    }
+
+    // 5. Verificar si imita dominios conocidos (typosquatting)
+    const typosquattingPatterns = [
+      { pattern: /g[o0]{2}gle|go+gle|googl[e3]/i, brand: 'Google' },
+      { pattern: /faceb[o0]{2}k|fac[e3]book|faceb00k/i, brand: 'Facebook' },
+      { pattern: /amaz[o0]n|amazon[0-9]/i, brand: 'Amazon' },
+      { pattern: /micr[o0]s[o0]ft|microsoft[0-9]/i, brand: 'Microsoft' },
+      { pattern: /app[l1]e|apple[0-9]/i, brand: 'Apple' },
+      { pattern: /netfl[i1]x|netflix[0-9]/i, brand: 'Netflix' },
+      { pattern: /paypa[l1]|paypal[0-9]/i, brand: 'PayPal' },
+      { pattern: /bank[o0]f|[a-z]+bank/i, brand: 'Banco' }
+    ];
+
+    for (const { pattern, brand } of typosquattingPatterns) {
+      if (pattern.test(hostname) && !safeDomains.some(safe => hostname.includes(safe))) {
+        reasons.push(`Posible imitacion de ${brand} (typosquatting)`);
+        dangerScore += 35;
+        break;
+      }
+    }
+
+    // 6. Verificar caracteres sospechosos (homoglyphs)
+    // Detectar caracteres no-ASCII que podrian ser homoglyphs
+    const nonAsciiPattern = /[^\x00-\x7F]/;
+    const strippedHostname = hostname.replace(/[a-zA-Z0-9.-]/g, '');
+    if (nonAsciiPattern.test(strippedHostname)) {
+      reasons.push('Caracteres unicode sospechosos detectados');
+      dangerScore += 30;
+    }
+
+    // 7. Verificar IP directa en lugar de dominio
+    const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
+    if (ipPattern.test(hostname)) {
+      reasons.push('Uso de direccion IP en lugar de dominio');
+      dangerScore += 25;
+    }
+
+    // 8. Verificar longitud excesiva del dominio
+    if (hostname.length > 30) {
+      reasons.push('Dominio inusualmente largo');
+      dangerScore += 15;
+    }
+
+    // 9. Verificar guiones multiples
+    if ((hostname.match(/-/g) || []).length > 2) {
+      reasons.push('Multiples guiones en el dominio');
+      dangerScore += 15;
+    }
+
+    // 10. Verificar numeros aleatorios en el dominio
+    if (/\d{4,}/.test(hostname)) {
+      reasons.push('Secuencia de numeros sospechosa en dominio');
+      dangerScore += 20;
+    }
+
+    // Calcular puntuacion final de seguridad (100 - dangerScore)
+    const securityScore = Math.max(0, Math.min(100, 100 - dangerScore));
+
+    // Determinar nivel de riesgo
+    let risk: string;
+    let color: string;
+
+    if (securityScore >= 80) {
+      risk = 'Bajo';
+      color = 'emerald';
+      if (reasons.length === 0) {
+        reasons.push('No se detectaron patrones de phishing');
+      }
+    } else if (securityScore >= 50) {
+      risk = 'Medio';
+      color = 'yellow';
+    } else if (securityScore >= 20) {
+      risk = 'Alto';
+      color = 'red';
+    } else {
+      risk = 'Critico';
+      color = 'red';
+    }
+
+    return { score: securityScore, risk, color, reasons };
+  };
+
+  const [analysisReasons, setAnalysisReasons] = useState<string[]>([]);
+
   const handleAnalyze = () => {
     if (!url.trim()) return;
 
@@ -61,18 +238,8 @@ export default function App() {
     setShowResults(false);
 
     setTimeout(() => {
-      // Generate random risk assessment
-      const riskLevels = [
-        { risk: 'Bajo', color: 'emerald', scoreRange: [80, 99] },
-        { risk: 'Medio', color: 'yellow', scoreRange: [50, 79] },
-        { risk: 'Alto', color: 'red', scoreRange: [10, 49] },
-        { risk: 'Crítico', color: 'red', scoreRange: [1, 9] }
-      ];
-
-      const randomRisk = riskLevels[Math.floor(Math.random() * riskLevels.length)];
-      const score = Math.floor(
-        Math.random() * (randomRisk.scoreRange[1] - randomRisk.scoreRange[0] + 1) + randomRisk.scoreRange[0]
-      );
+      // Usar el algoritmo de deteccion real
+      const analysis = analyzeUrlForPhishing(url);
 
       const now = new Date();
       const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
@@ -81,17 +248,18 @@ export default function App() {
         id: Date.now(),
         url: url,
         date: dateStr,
-        risk: randomRisk.risk,
-        score: score,
-        color: randomRisk.color
+        risk: analysis.risk,
+        score: analysis.score,
+        color: analysis.color
       };
 
       setCurrentResult(newResult);
+      setAnalysisReasons(analysis.reasons);
       setHistory(prev => [newResult, ...prev]);
       setIsScanning(false);
       setShowResults(true);
       setUrl('');
-    }, 3000);
+    }, 2000);
   };
 
   const handleBlockUrl = (id: number) => {
@@ -231,19 +399,31 @@ export default function App() {
                     {/* Scanning Animation */}
                     {isScanning && (
                       <div className="mt-8 relative">
-                        <div className="h-40 bg-black/20 border border-cyan-500/30 rounded-xl overflow-hidden relative">
+                        <div className="h-48 bg-black/20 border border-cyan-500/30 rounded-xl overflow-hidden relative">
+                          {/* Animated scan line */}
+                          <div className="absolute inset-0 overflow-hidden">
+                            <div className="absolute w-full h-1 bg-gradient-to-r from-transparent via-cyan-400 to-transparent animate-scan"></div>
+                          </div>
                           <div className="absolute inset-0 flex items-center justify-center">
                             <div className="text-center">
-                              <Activity className="w-10 h-10 text-cyan-400 mx-auto mb-3" />
-                              <p className="text-cyan-300 font-semibold flex items-center justify-center gap-1">
-                                Analizando seguridad
+                              <div className="relative">
+                                <Shield className="w-14 h-14 text-cyan-400 mx-auto mb-3 animate-pulse" />
+                                <div className="absolute inset-0 w-14 h-14 mx-auto border-2 border-cyan-400/50 rounded-full animate-ping"></div>
+                              </div>
+                              <p className="text-cyan-300 font-semibold text-lg flex items-center justify-center gap-1">
+                                Escaneando enlace
                                 <span className="inline-flex gap-1">
                                   <span className="dot-bounce" style={{ animationDelay: '0s' }}>.</span>
                                   <span className="dot-bounce" style={{ animationDelay: '0.2s' }}>.</span>
                                   <span className="dot-bounce" style={{ animationDelay: '0.4s' }}>.</span>
                                 </span>
                               </p>
-                              <p className="text-gray-500 text-sm mt-1">Verificando certificados y reputación</p>
+                              <p className="text-gray-500 text-sm mt-2">Analizando patrones de phishing y amenazas</p>
+                              <div className="mt-4 flex items-center justify-center gap-4 text-xs text-gray-600">
+                                <span className="flex items-center gap-1"><Lock className="w-3 h-3" /> SSL</span>
+                                <span className="flex items-center gap-1"><Globe className="w-3 h-3" /> Dominio</span>
+                                <span className="flex items-center gap-1"><Server className="w-3 h-3" /> Reputacion</span>
+                              </div>
                             </div>
                           </div>
                         </div>
@@ -352,55 +532,93 @@ export default function App() {
 
                   {/* Additional Info Cards */}
                   <div className="grid md:grid-cols-2 gap-6">
-                    <div className="bg-gray-900/40 border border-gray-800 rounded-2xl p-6 backdrop-blur-sm">
+                    {/* Motivos del Analisis - Nueva tarjeta dinamica */}
+                    <div className={`bg-gradient-to-br from-gray-900/50 to-gray-800/30 border ${
+                      currentResult.color === 'emerald' ? 'border-emerald-500/30' :
+                      currentResult.color === 'yellow' ? 'border-yellow-500/30' :
+                      'border-red-500/30'
+                    } rounded-2xl p-6 backdrop-blur-sm`}>
                       <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <Activity className="w-5 h-5 text-cyan-400" />
-                        Análisis de Contenido
+                        <Shield className={`w-5 h-5 ${
+                          currentResult.color === 'emerald' ? 'text-emerald-400' :
+                          currentResult.color === 'yellow' ? 'text-yellow-400' :
+                          'text-red-400'
+                        }`} />
+                        Motivos del Analisis
                       </h3>
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-400">Formularios Sospechosos</span>
-                          <span className="text-emerald-400 flex items-center gap-1">
-                            <CheckCircle className="w-4 h-4" /> No detectados
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-400">Scripts Maliciosos</span>
-                          <span className="text-emerald-400 flex items-center gap-1">
-                            <CheckCircle className="w-4 h-4" /> No detectados
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-400">Redirecciones</span>
-                          <span className="text-yellow-400 flex items-center gap-1">
-                            <AlertTriangle className="w-4 h-4" /> 1 encontrada
-                          </span>
-                        </div>
+                        {analysisReasons.map((reason, index) => (
+                          <div key={index} className="flex items-start gap-3">
+                            {currentResult.color === 'emerald' ? (
+                              <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                            ) : (
+                              <AlertTriangle className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
+                                currentResult.color === 'yellow' ? 'text-yellow-400' : 'text-red-400'
+                              }`} />
+                            )}
+                            <span className="text-gray-300">{reason}</span>
+                          </div>
+                        ))}
+                      </div>
+                      <div className="mt-4 pt-4 border-t border-gray-700">
+                        <p className="text-sm text-gray-500">
+                          URL analizada: <span className="text-gray-400 break-all">{currentResult.url}</span>
+                        </p>
                       </div>
                     </div>
 
                     <div className="bg-gray-900/40 border border-gray-800 rounded-2xl p-6 backdrop-blur-sm">
                       <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <Globe className="w-5 h-5 text-cyan-400" />
-                        Reputación del Dominio
+                        <Activity className="w-5 h-5 text-cyan-400" />
+                        Recomendaciones
                       </h3>
                       <div className="space-y-3">
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-400">Antigüedad del Dominio</span>
-                          <span className="text-white">3 años, 5 meses</span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-400">Lista Negra</span>
-                          <span className="text-emerald-400 flex items-center gap-1">
-                            <CheckCircle className="w-4 h-4" /> Limpio
-                          </span>
-                        </div>
-                        <div className="flex items-center justify-between">
-                          <span className="text-gray-400">DNSSEC</span>
-                          <span className="text-emerald-400 flex items-center gap-1">
-                            <CheckCircle className="w-4 h-4" /> Habilitado
-                          </span>
-                        </div>
+                        {currentResult.color === 'emerald' ? (
+                          <>
+                            <div className="flex items-start gap-3">
+                              <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300">Este sitio parece seguro para navegar</span>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300">Verifica siempre que la URL sea la oficial</span>
+                            </div>
+                          </>
+                        ) : currentResult.color === 'yellow' ? (
+                          <>
+                            <div className="flex items-start gap-3">
+                              <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300">Procede con precaucion al navegar</span>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300">No ingreses datos personales sensibles</span>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300">Verifica la autenticidad del sitio</span>
+                            </div>
+                          </>
+                        ) : (
+                          <>
+                            <div className="flex items-start gap-3">
+                              <XCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300">NO navegues en este sitio</span>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <XCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300">No ingreses ninguna informacion personal</span>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <XCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300">Reporta este sitio como sospechoso</span>
+                            </div>
+                            <div className="flex items-start gap-3">
+                              <XCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300">Considera bloquear esta URL</span>
+                            </div>
+                          </>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -509,6 +727,24 @@ export default function App() {
           animation: dotBounce 1.4s infinite ease-in-out;
           font-size: 1.5em;
           line-height: 0;
+        }
+
+        @keyframes scan {
+          0% {
+            top: 0%;
+            opacity: 1;
+          }
+          50% {
+            opacity: 0.5;
+          }
+          100% {
+            top: 100%;
+            opacity: 1;
+          }
+        }
+
+        .animate-scan {
+          animation: scan 2s linear infinite;
         }
       `}</style>
     </div>

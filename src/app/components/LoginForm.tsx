@@ -48,7 +48,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
           <div className="inline-flex items-center justify-center mb-4">
             <Logo className="w-20 h-20" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">PhishGuard Enterprise</h1>
+          <h1 className="text-3xl font-bold text-white mb-2">PhishingSecureJD</h1>
           <p className="text-gray-400">Plataforma de Seguridad Avanzada</p>
         </div>
 
@@ -189,7 +189,7 @@ export function LoginForm({ onLogin }: LoginFormProps) {
         </div>
 
         <p className="text-center text-gray-500 text-sm mt-6">
-          © 2026 PhishGuard Enterprise. Todos los derechos reservados.
+          © 2026 PhishingSecureJD. Todos los derechos reservados.
         </p>
       </div>
 
