@@ -169,8 +169,10 @@ export default function App() {
     }
 
     // 6. Verificar caracteres sospechosos (homoglyphs)
-    const homoglyphPattern = /[а-яА-Яα-ωА-Ω0-9]/;
-    if (homoglyphPattern.test(hostname.replace(/[a-zA-Z0-9.-]/g, ''))) {
+    // Detectar caracteres no-ASCII que podrian ser homoglyphs
+    const nonAsciiPattern = /[^\x00-\x7F]/;
+    const strippedHostname = hostname.replace(/[a-zA-Z0-9.-]/g, '');
+    if (nonAsciiPattern.test(strippedHostname)) {
       reasons.push('Caracteres unicode sospechosos detectados');
       dangerScore += 30;
     }
