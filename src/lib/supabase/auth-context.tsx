@@ -1,11 +1,12 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { createClient } from './client'
+import { createClient, isSupabaseConfigured } from './client'
 import type { User, Session } from '@supabase/supabase-js'
 
 interface AuthContextType {
   user: User | null
   session: Session | null
   isLoading: boolean
+  isConfigured: boolean
   signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string) => Promise<{ error: Error | null; needsConfirmation: boolean }>
   signInWithGoogle: () => Promise<{ error: Error | null }>
@@ -18,9 +19,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [configured] = useState(() => isSupabaseConfigured())
 
   useEffect(() => {
     const supabase = createClient()
+    
+    // If Supabase is not configured, stop loading and run in demo mode
+    if (!supabase) {
+      setIsLoading(false)
+      return
+    }
 
     // Get initial session
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -41,6 +49,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithPassword = async (email: string, password: string) => {
     const supabase = createClient()
+    if (!supabase) {
+      return { error: new Error('Supabase not configured. Please set environment variables.') }
+    }
     const { error } = await supabase.auth.signInWithPassword({
       email,
       password,
@@ -50,6 +61,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signUp = async (email: string, password: string) => {
     const supabase = createClient()
+    if (!supabase) {
+      return { error: new Error('Supabase not configured. Please set environment variables.'), needsConfirmation: false }
+    }
     const redirectUrl = import.meta.env.VITE_DEV_SUPABASE_REDIRECT_URL || 
       import.meta.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
       `${window.location.origin}/auth/callback`
@@ -70,6 +84,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signInWithGoogle = async () => {
     const supabase = createClient()
+    if (!supabase) {
+      return { error: new Error('Supabase not configured. Please set environment variables.') }
+    }
     const redirectUrl = import.meta.env.VITE_DEV_SUPABASE_REDIRECT_URL || 
       import.meta.env.NEXT_PUBLIC_DEV_SUPABASE_REDIRECT_URL ||
       `${window.location.origin}/auth/callback`
@@ -85,6 +102,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const signOut = async () => {
     const supabase = createClient()
+    if (!supabase) return
     await supabase.auth.signOut()
   }
 
@@ -93,6 +111,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       user,
       session,
       isLoading,
+      isConfigured: configured,
       signInWithPassword,
       signUp,
       signInWithGoogle,
