@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Shield, Lock, AlertTriangle, CheckCircle, XCircle, Activity, Globe, Server, Database, Settings as SettingsIcon, LogOut } from 'lucide-react';
 import { Sidebar } from './components/Sidebar';
 import { LoginForm } from './components/LoginForm';
@@ -8,6 +8,7 @@ import { SecurityTips } from './components/SecurityTips';
 import { BlockedList } from './components/BlockedList';
 import { Settings } from './components/Settings';
 import { AuthProvider, useAuth } from '../lib/supabase/auth-context';
+import { createClient, isSupabaseConfigured } from '../lib/supabase/client';
 
 interface AnalysisResult {
   id: number;
@@ -28,32 +29,110 @@ function AppContent() {
   const [blockedList, setBlockedList] = useState<AnalysisResult[]>([]);
   const [currentResult, setCurrentResult] = useState<AnalysisResult | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
 
-  // Load from localStorage on mount
+  // Funcion para cargar historial desde Supabase filtrado por email del usuario
+  const loadHistoryFromSupabase = useCallback(async () => {
+    if (!user?.email || !isSupabaseConfigured) return;
+    
+    setIsLoadingHistory(true);
+    try {
+      const supabase = createClient();
+      
+      // Cargar historial del usuario actual
+      const { data: historyData, error: historyError } = await supabase
+        .from('analysis_history')
+        .select('*')
+        .eq('user_email', user.email)
+        .eq('is_blocked', false)
+        .order('created_at', { ascending: false });
+      
+      if (historyError) {
+        console.error('[v0] Error loading history:', historyError);
+      } else if (historyData) {
+        const formattedHistory: AnalysisResult[] = historyData.map((item: {
+          id: number;
+          url: string;
+          created_at: string;
+          risk: string;
+          score: number;
+          color: string;
+        }) => ({
+          id: item.id,
+          url: item.url,
+          date: new Date(item.created_at).toLocaleString('es-ES', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          risk: item.risk,
+          score: item.score,
+          color: item.color
+        }));
+        setHistory(formattedHistory);
+      }
+
+      // Cargar lista de bloqueados del usuario actual
+      const { data: blockedData, error: blockedError } = await supabase
+        .from('analysis_history')
+        .select('*')
+        .eq('user_email', user.email)
+        .eq('is_blocked', true)
+        .order('created_at', { ascending: false });
+      
+      if (blockedError) {
+        console.error('[v0] Error loading blocked list:', blockedError);
+      } else if (blockedData) {
+        const formattedBlocked: AnalysisResult[] = blockedData.map((item: {
+          id: number;
+          url: string;
+          created_at: string;
+          risk: string;
+          score: number;
+          color: string;
+        }) => ({
+          id: item.id,
+          url: item.url,
+          date: new Date(item.created_at).toLocaleString('es-ES', {
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit',
+            hour: '2-digit',
+            minute: '2-digit'
+          }),
+          risk: item.risk,
+          score: item.score,
+          color: item.color
+        }));
+        setBlockedList(formattedBlocked);
+      }
+    } catch (error) {
+      console.error('[v0] Error in loadHistoryFromSupabase:', error);
+    } finally {
+      setIsLoadingHistory(false);
+    }
+  }, [user?.email]);
+
+  // Cargar historial cuando el usuario inicia sesion
   useEffect(() => {
-    const savedHistory = localStorage.getItem('phishguard_history');
-    const savedBlocked = localStorage.getItem('phishguard_blocked');
-    const savedDarkMode = localStorage.getItem('phishguard_darkmode');
+    if (user?.email && isSupabaseConfigured) {
+      loadHistoryFromSupabase();
+    } else {
+      // Limpiar historial si no hay usuario
+      setHistory([]);
+      setBlockedList([]);
+    }
+  }, [user?.email, loadHistoryFromSupabase]);
 
-    if (savedHistory) {
-      setHistory(JSON.parse(savedHistory));
-    }
-    if (savedBlocked) {
-      setBlockedList(JSON.parse(savedBlocked));
-    }
+  // Load dark mode preference from localStorage (solo preferencia de tema)
+  useEffect(() => {
+    const savedDarkMode = localStorage.getItem('phishguard_darkmode');
     if (savedDarkMode !== null) {
       setIsDarkMode(savedDarkMode === 'true');
     }
   }, []);
-
-  // Save to localStorage whenever history or blockedList changes
-  useEffect(() => {
-    localStorage.setItem('phishguard_history', JSON.stringify(history));
-  }, [history]);
-
-  useEffect(() => {
-    localStorage.setItem('phishguard_blocked', JSON.stringify(blockedList));
-  }, [blockedList]);
 
   // Lista de dominios seguros conocidos
   const safeDomains = [
@@ -232,93 +311,159 @@ function AppContent() {
 
   const [analysisReasons, setAnalysisReasons] = useState<string[]>([]);
 
-  const handleAnalyze = () => {
-    if (!url.trim()) return;
+  const handleAnalyze = async () => {
+    if (!url.trim() || !user?.email) return;
 
     setIsScanning(true);
     setShowResults(false);
 
-    setTimeout(() => {
-      // Usar el algoritmo de deteccion real
-      const analysis = analyzeUrlForPhishing(url);
+    // Simular tiempo de escaneo
+    await new Promise(resolve => setTimeout(resolve, 2000));
 
-      const now = new Date();
-      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')} ${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+    // Usar el algoritmo de deteccion real
+    const analysis = analyzeUrlForPhishing(url);
 
-      const newResult: AnalysisResult = {
-        id: Date.now(),
-        url: url,
-        date: dateStr,
-        risk: analysis.risk,
-        score: analysis.score,
-        color: analysis.color
-      };
+    const now = new Date();
+    const dateStr = now.toLocaleString('es-ES', {
+      year: 'numeric',
+      month: '2-digit',
+      day: '2-digit',
+      hour: '2-digit',
+      minute: '2-digit'
+    });
 
-      setCurrentResult(newResult);
-      setAnalysisReasons(analysis.reasons);
-      setHistory(prev => [newResult, ...prev]);
-      setIsScanning(false);
-      setShowResults(true);
-      setUrl('');
+    // Guardar en Supabase con el email del usuario
+    if (isSupabaseConfigured) {
+      try {
+        const supabase = createClient();
+        const { data: insertedData, error: insertError } = await supabase
+          .from('analysis_history')
+          .insert({
+            url: url,
+            user_email: user.email,
+            risk: analysis.risk,
+            score: analysis.score,
+            color: analysis.color,
+            is_blocked: false,
+            created_at: now.toISOString()
+          })
+          .select()
+          .single();
 
-      // Email alert for high/critical risk (encapsulated safely)
-      if (analysis.risk === 'Alto' || analysis.risk === 'Critico') {
-        try {
-          const emailAlertsEnabled = localStorage.getItem('phishguard_email_alerts_enabled') === 'true';
-          const alertEmail = localStorage.getItem('phishguard_alert_email');
-          
-          if (emailAlertsEnabled && alertEmail) {
-            // Prepare email notification data
-            const emailData = {
-              to: alertEmail,
-              subject: `[PhishingSecureJD] Alerta de Seguridad - Riesgo ${analysis.risk} Detectado`,
-              body: {
-                url: url,
-                risk: analysis.risk,
-                score: analysis.score,
-                date: dateStr,
-                reasons: analysis.reasons
-              }
-            };
-            
-            // Log the alert preparation (in production, this would call an email API)
-            console.log('[PhishingSecureJD] Email alert prepared:', emailData);
-            
-            // In production, you would call your email API here:
-            // await sendEmailAlert(emailData);
-            
-            // For now, show a visual notification that alert was triggered
-            console.log(`[PhishingSecureJD] Alert would be sent to: ${alertEmail}`);
-          }
-        } catch (emailError) {
-          // Safely catch any errors to prevent breaking the app
-          console.error('[PhishingSecureJD] Email alert error (non-critical):', emailError);
+        if (insertError) {
+          console.error('[v0] Error saving analysis to Supabase:', insertError);
+        } else if (insertedData) {
+          const newResult: AnalysisResult = {
+            id: insertedData.id,
+            url: insertedData.url,
+            date: dateStr,
+            risk: insertedData.risk,
+            score: insertedData.score,
+            color: insertedData.color
+          };
+
+          setCurrentResult(newResult);
+          setAnalysisReasons(analysis.reasons);
+          setHistory(prev => [newResult, ...prev]);
         }
+      } catch (error) {
+        console.error('[v0] Error in handleAnalyze:', error);
       }
-    }, 2000);
+    }
+
+    setIsScanning(false);
+    setShowResults(true);
+    setUrl('');
+
+    // Email alert for high/critical risk (encapsulated safely)
+    if (analysis.risk === 'Alto' || analysis.risk === 'Critico') {
+      try {
+        const emailAlertsEnabled = localStorage.getItem('phishguard_email_alerts_enabled') === 'true';
+        const alertEmail = localStorage.getItem('phishguard_alert_email');
+        
+        if (emailAlertsEnabled && alertEmail) {
+          console.log(`[PhishingSecureJD] Alert would be sent to: ${alertEmail}`);
+        }
+      } catch (emailError) {
+        console.error('[PhishingSecureJD] Email alert error (non-critical):', emailError);
+      }
+    }
   };
 
-  const handleBlockUrl = (id: number) => {
+  const handleBlockUrl = async (id: number) => {
     const itemToBlock = history.find(item => item.id === id);
     if (itemToBlock) {
+      // Actualizar en Supabase
+      if (isSupabaseConfigured) {
+        try {
+          const supabase = createClient();
+          const { error } = await supabase
+            .from('analysis_history')
+            .update({ is_blocked: true })
+            .eq('id', id);
+          
+          if (error) {
+            console.error('[v0] Error blocking URL:', error);
+            return;
+          }
+        } catch (error) {
+          console.error('[v0] Error in handleBlockUrl:', error);
+          return;
+        }
+      }
+      
       setBlockedList(prev => [itemToBlock, ...prev]);
       setHistory(prev => prev.filter(item => item.id !== id));
     }
   };
 
-  const handleUnblockUrl = (id: number) => {
+  const handleUnblockUrl = async (id: number) => {
     const itemToUnblock = blockedList.find(item => item.id === id);
     if (itemToUnblock) {
+      // Actualizar en Supabase
+      if (isSupabaseConfigured) {
+        try {
+          const supabase = createClient();
+          const { error } = await supabase
+            .from('analysis_history')
+            .update({ is_blocked: false })
+            .eq('id', id);
+          
+          if (error) {
+            console.error('[v0] Error unblocking URL:', error);
+            return;
+          }
+        } catch (error) {
+          console.error('[v0] Error in handleUnblockUrl:', error);
+          return;
+        }
+      }
+      
       setHistory(prev => [itemToUnblock, ...prev]);
       setBlockedList(prev => prev.filter(item => item.id !== id));
     }
   };
 
-  const handleClearHistory = () => {
-    setHistory([]);
-    setBlockedList([]);
-    localStorage.removeItem('phishguard_history');
-    localStorage.removeItem('phishguard_blocked');
+  const handleClearHistory = async () => {
+    if (!user?.email || !isSupabaseConfigured) return;
+    
+    try {
+      const supabase = createClient();
+      const { error } = await supabase
+        .from('analysis_history')
+        .delete()
+        .eq('user_email', user.email);
+      
+      if (error) {
+        console.error('[v0] Error clearing history:', error);
+        return;
+      }
+      
+      setHistory([]);
+      setBlockedList([]);
+    } catch (error) {
+      console.error('[v0] Error in handleClearHistory:', error);
+    }
   };
 
   const handleThemeChange = (isDark: boolean) => {
@@ -395,7 +540,7 @@ function AppContent() {
           {activeSection === 'dashboard' && (
             <>
               {/* Stats Cards */}
-              <StatsCards />
+              <StatsCards history={history} blockedList={blockedList} />
 
               {/* Scanner Section */}
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
