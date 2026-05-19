@@ -102,8 +102,8 @@ export function LoginForm() {
           <div className="inline-flex items-center justify-center mb-4">
             <Logo className="w-20 h-20" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">PhishingSecureJD</h1>
-          <p className="text-gray-400">Plataforma de Seguridad Avanzada</p>
+          <h1 className="text-3xl font-bold text-white mb-2">Iniciar Sesión - PhishingSecureJD</h1>
+          <p className="text-gray-400">Plataforma de Entrenamiento en Seguridad contra Phishing</p>
         </div>
 
         {/* Form Container */}
