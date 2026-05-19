@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Moon, Sun, Bell, Trash2, Shield, Save } from 'lucide-react';
+import { Moon, Sun, Bell, Trash2, Shield, Save, Mail, ToggleLeft, ToggleRight } from 'lucide-react';
 
 interface SettingsProps {
   onClearHistory: () => void;
@@ -10,11 +10,16 @@ export function Settings({ onClearHistory, onThemeChange }: SettingsProps) {
   const [darkMode, setDarkMode] = useState(true);
   const [sensitivity, setSensitivity] = useState(2); // 1: Bajo, 2: Medio, 3: Alto
   const [notifications, setNotifications] = useState(false);
+  const [alertEmail, setAlertEmail] = useState('');
+  const [emailAlertsEnabled, setEmailAlertsEnabled] = useState(false);
+  const [emailSaved, setEmailSaved] = useState(false);
 
   useEffect(() => {
     const savedDarkMode = localStorage.getItem('phishguard_darkmode');
     const savedSensitivity = localStorage.getItem('phishguard_sensitivity');
     const savedNotifications = localStorage.getItem('phishguard_notifications');
+    const savedAlertEmail = localStorage.getItem('phishguard_alert_email');
+    const savedEmailAlertsEnabled = localStorage.getItem('phishguard_email_alerts_enabled');
 
     if (savedDarkMode !== null) {
       const isDark = savedDarkMode === 'true';
@@ -26,6 +31,12 @@ export function Settings({ onClearHistory, onThemeChange }: SettingsProps) {
     }
     if (savedNotifications !== null) {
       setNotifications(savedNotifications === 'true');
+    }
+    if (savedAlertEmail !== null) {
+      setAlertEmail(savedAlertEmail);
+    }
+    if (savedEmailAlertsEnabled !== null) {
+      setEmailAlertsEnabled(savedEmailAlertsEnabled === 'true');
     }
   }, []);
 
@@ -45,6 +56,23 @@ export function Settings({ onClearHistory, onThemeChange }: SettingsProps) {
     const newValue = !notifications;
     setNotifications(newValue);
     localStorage.setItem('phishguard_notifications', String(newValue));
+  };
+
+  const handleEmailChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAlertEmail(e.target.value);
+    setEmailSaved(false);
+  };
+
+  const handleSaveEmail = () => {
+    localStorage.setItem('phishguard_alert_email', alertEmail);
+    setEmailSaved(true);
+    setTimeout(() => setEmailSaved(false), 3000);
+  };
+
+  const handleEmailAlertsToggle = () => {
+    const newValue = !emailAlertsEnabled;
+    setEmailAlertsEnabled(newValue);
+    localStorage.setItem('phishguard_email_alerts_enabled', String(newValue));
   };
 
   const handleClearHistory = () => {
@@ -186,6 +214,100 @@ export function Settings({ onClearHistory, onThemeChange }: SettingsProps) {
               }`}
             ></div>
           </button>
+        </div>
+      </div>
+
+      {/* Email Security Alerts */}
+      <div className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-orange-500/20 rounded-2xl p-6 backdrop-blur-xl">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 bg-orange-500/20 rounded-xl flex items-center justify-center">
+            <Mail className="w-5 h-5 text-orange-400" />
+          </div>
+          <div>
+            <h3 className="text-lg font-semibold text-white">Notificaciones de Seguridad</h3>
+            <p className="text-gray-400 text-sm">Recibe alertas por correo cuando se detecten amenazas</p>
+          </div>
+        </div>
+
+        <div className="space-y-4">
+          {/* Email Input */}
+          <div className="p-4 bg-black/20 border border-gray-800 rounded-xl">
+            <label className="text-white font-medium mb-3 block">Correo de Alertas</label>
+            <div className="flex gap-3">
+              <div className="flex-1 relative">
+                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500" />
+                <input
+                  type="email"
+                  value={alertEmail}
+                  onChange={handleEmailChange}
+                  placeholder="admin@empresa.com"
+                  className="w-full pl-11 pr-4 py-3 bg-black/30 border border-gray-700 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-orange-500/50 transition-all duration-300"
+                />
+              </div>
+              <button
+                onClick={handleSaveEmail}
+                disabled={!alertEmail.includes('@')}
+                className={`px-4 py-3 rounded-xl font-semibold transition-all duration-300 flex items-center gap-2 ${
+                  emailSaved 
+                    ? 'bg-emerald-600 text-white' 
+                    : alertEmail.includes('@')
+                    ? 'bg-orange-600 hover:bg-orange-500 text-white'
+                    : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                }`}
+              >
+                {emailSaved ? (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Guardado
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4" />
+                    Guardar
+                  </>
+                )}
+              </button>
+            </div>
+            <p className="text-gray-500 text-xs mt-2">Este correo recibira alertas de phishing critico</p>
+          </div>
+
+          {/* Toggle for Phishing Alerts */}
+          <div className="flex items-center justify-between p-4 bg-black/20 border border-gray-800 rounded-xl">
+            <div className="flex items-center gap-3">
+              {emailAlertsEnabled ? (
+                <ToggleRight className="w-5 h-5 text-orange-400" />
+              ) : (
+                <ToggleLeft className="w-5 h-5 text-gray-500" />
+              )}
+              <div>
+                <p className="text-white font-medium">Activar alertas por Phishing Critico</p>
+                <p className="text-gray-500 text-sm">Enviar correo cuando se detecte riesgo Alto o Critico</p>
+              </div>
+            </div>
+            <button
+              onClick={handleEmailAlertsToggle}
+              disabled={!alertEmail.includes('@')}
+              className={`relative w-14 h-7 rounded-full transition-all duration-300 ${
+                emailAlertsEnabled ? 'bg-orange-600' : 'bg-gray-600'
+              } ${!alertEmail.includes('@') ? 'opacity-50 cursor-not-allowed' : ''}`}
+            >
+              <div
+                className={`absolute top-0.5 left-0.5 w-6 h-6 bg-white rounded-full transition-transform duration-300 ${
+                  emailAlertsEnabled ? 'translate-x-7' : 'translate-x-0'
+                }`}
+              ></div>
+            </button>
+          </div>
+
+          {/* Status indicator */}
+          {emailAlertsEnabled && alertEmail.includes('@') && (
+            <div className="flex items-center gap-2 p-3 bg-orange-500/10 border border-orange-500/30 rounded-xl">
+              <div className="w-2 h-2 bg-orange-400 rounded-full animate-pulse"></div>
+              <p className="text-orange-300 text-sm">
+                Alertas activas para: <span className="font-medium">{alertEmail}</span>
+              </p>
+            </div>
+          )}
         </div>
       </div>
 

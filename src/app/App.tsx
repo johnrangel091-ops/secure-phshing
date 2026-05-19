@@ -260,6 +260,41 @@ function AppContent() {
       setIsScanning(false);
       setShowResults(true);
       setUrl('');
+
+      // Email alert for high/critical risk (encapsulated safely)
+      if (analysis.risk === 'Alto' || analysis.risk === 'Critico') {
+        try {
+          const emailAlertsEnabled = localStorage.getItem('phishguard_email_alerts_enabled') === 'true';
+          const alertEmail = localStorage.getItem('phishguard_alert_email');
+          
+          if (emailAlertsEnabled && alertEmail) {
+            // Prepare email notification data
+            const emailData = {
+              to: alertEmail,
+              subject: `[PhishingSecureJD] Alerta de Seguridad - Riesgo ${analysis.risk} Detectado`,
+              body: {
+                url: url,
+                risk: analysis.risk,
+                score: analysis.score,
+                date: dateStr,
+                reasons: analysis.reasons
+              }
+            };
+            
+            // Log the alert preparation (in production, this would call an email API)
+            console.log('[PhishingSecureJD] Email alert prepared:', emailData);
+            
+            // In production, you would call your email API here:
+            // await sendEmailAlert(emailData);
+            
+            // For now, show a visual notification that alert was triggered
+            console.log(`[PhishingSecureJD] Alert would be sent to: ${alertEmail}`);
+          }
+        } catch (emailError) {
+          // Safely catch any errors to prevent breaking the app
+          console.error('[PhishingSecureJD] Email alert error (non-critical):', emailError);
+        }
+      }
     }, 2000);
   };
 

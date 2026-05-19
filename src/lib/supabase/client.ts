@@ -22,9 +22,11 @@ export function createClient(): SupabaseClient {
     const mockClient = {
       auth: {
         getSession: async () => ({ data: { session: null }, error: null }),
-        onAuthStateChange: (_event: string, callback: (event: string, session: null) => void) => {
-          // Simulate auth ready state
-          setTimeout(() => callback('SIGNED_OUT', null), 0)
+        onAuthStateChange: (callback: (event: string, session: null) => void) => {
+          // Simulate auth ready state - call callback asynchronously to prevent sync issues
+          if (typeof callback === 'function') {
+            setTimeout(() => callback('SIGNED_OUT', null), 0)
+          }
           return { data: { subscription: { unsubscribe: () => {} } } }
         },
         signInWithPassword: async () => ({ 
