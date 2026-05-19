@@ -1,10 +1,16 @@
 import { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, CheckCircle, XCircle, Loader2 } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, CheckCircle, XCircle, Loader2, ArrowLeft } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '../../lib/supabase/auth-context';
+import { createClient } from '../../lib/supabase/client';
 
 export function LoginForm() {
-  const { signInWithPassword, signUp, signInWithGoogle } = useAuth();
+  const { signInWithPassword, signUp } = useAuth();
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [resetEmail, setResetEmail] = useState('');
+  const [resetEmailValid, setResetEmailValid] = useState<boolean | null>(null);
+  const [isResetting, setIsResetting] = useState(false);
+  const [resetMessage, setResetMessage] = useState<{ type: 'success' | 'error'; text: string } | null>(null);
   const [isLogin, setIsLogin] = useState(true);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -72,18 +78,50 @@ export function LoginForm() {
     }
   };
 
-  const handleGoogleLogin = async () => {
-    setIsLoading(true);
-    setError(null);
+  const validateResetEmail = (value: string) => {
+    const isValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
+    setResetEmailValid(value.length > 0 ? isValid : null);
+    setResetEmail(value);
+    setResetMessage(null);
+  };
+
+  const handleForgotPassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!resetEmailValid) return;
+
+    setIsResetting(true);
+    setResetMessage(null);
+
     try {
-      const { error } = await signInWithGoogle();
+      const supabase = createClient();
+      const redirectUrl = typeof window !== 'undefined' 
+        ? `${window.location.origin}/update-password`
+        : 'http://localhost:3000/update-password';
+
+      const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
+        redirectTo: redirectUrl,
+      });
+
       if (error) {
-        setError('Error al iniciar sesion con Google. Intenta nuevamente.');
+        setResetMessage({ 
+          type: 'error', 
+          text: error.message || 'Error al enviar el enlace de recuperacion. Intenta nuevamente.' 
+        });
+      } else {
+        setResetMessage({ 
+          type: 'success', 
+          text: 'Enlace de recuperacion enviado. Revisa tu bandeja de entrada y carpeta de spam.' 
+        });
+        setResetEmail('');
+        setResetEmailValid(null);
       }
     } catch (err) {
-      setError('Error al conectar con Google.');
+      setResetMessage({ 
+        type: 'error', 
+        text: 'Ocurrio un error inesperado. Intenta nuevamente.' 
+      });
     } finally {
-      setIsLoading(false);
+      setIsResetting(false);
     }
   };
 
@@ -231,9 +269,18 @@ export function LoginForm() {
                   <input type="checkbox" className="mr-2 accent-cyan-500" />
                   Recordarme
                 </label>
-                <a href="#" className="text-cyan-400 hover:text-cyan-300 transition-colors">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowForgotPassword(true);
+                    setResetMessage(null);
+                    setResetEmail('');
+                    setResetEmailValid(null);
+                  }}
+                  className="text-cyan-400 hover:text-cyan-300 transition-colors hover:underline"
+                >
                   Olvidaste tu contrasena?
-                </a>
+                </button>
               </div>
             )}
 
@@ -259,44 +306,124 @@ export function LoginForm() {
               <div className="absolute inset-0 bg-gradient-to-r from-cyan-400 to-blue-400 opacity-0 group-hover:opacity-20 transition-opacity duration-300"></div>
             </button>
           </form>
-
-          {/* OAuth Options */}
-          <div className="mt-6 pt-6 border-t border-gray-700">
-            <p className="text-center text-gray-500 text-sm mb-4">O continua con</p>
-            <div className="grid grid-cols-1 gap-3">
-              <button
-                onClick={handleGoogleLogin}
-                disabled={isLoading}
-                className="py-3 bg-white/5 hover:bg-white/10 border border-gray-700 rounded-xl text-gray-300 text-sm font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-              >
-                <svg className="w-5 h-5" viewBox="0 0 24 24">
-                  <path
-                    fill="currentColor"
-                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                  />
-                  <path
-                    fill="currentColor"
-                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                  />
-                </svg>
-                Continuar con Google
-              </button>
-            </div>
-          </div>
         </div>
 
         <p className="text-center text-gray-500 text-sm mt-6">
           2026 PhishingSecureJD. Todos los derechos reservados.
         </p>
       </div>
+
+      {/* Modal de Recuperacion de Contrasena */}
+      {showForgotPassword && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+          {/* Overlay */}
+          <div 
+            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            onClick={() => setShowForgotPassword(false)}
+          ></div>
+          
+          {/* Modal Content */}
+          <div className="relative z-10 w-full max-w-md bg-gradient-to-br from-gray-900 to-gray-800 border border-cyan-500/30 rounded-2xl p-8 shadow-2xl">
+            <button
+              onClick={() => setShowForgotPassword(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-white transition-colors"
+            >
+              <XCircle className="w-6 h-6" />
+            </button>
+
+            <div className="text-center mb-6">
+              <div className="inline-flex items-center justify-center w-16 h-16 bg-cyan-500/20 rounded-full mb-4">
+                <Lock className="w-8 h-8 text-cyan-400" />
+              </div>
+              <h2 className="text-2xl font-bold text-white mb-2">Recuperar Contrasena</h2>
+              <p className="text-gray-400 text-sm">
+                Ingresa tu correo electronico y te enviaremos un enlace para restablecer tu contrasena.
+              </p>
+            </div>
+
+            {/* Reset Messages */}
+            {resetMessage && (
+              <div className={`mb-6 p-4 rounded-xl ${
+                resetMessage.type === 'success' 
+                  ? 'bg-emerald-500/10 border border-emerald-500/30' 
+                  : 'bg-red-500/10 border border-red-500/30'
+              }`}>
+                <p className={`text-sm flex items-center gap-2 ${
+                  resetMessage.type === 'success' ? 'text-emerald-400' : 'text-red-400'
+                }`}>
+                  {resetMessage.type === 'success' ? (
+                    <CheckCircle className="w-4 h-4" />
+                  ) : (
+                    <XCircle className="w-4 h-4" />
+                  )}
+                  {resetMessage.text}
+                </p>
+              </div>
+            )}
+
+            <form onSubmit={handleForgotPassword} className="space-y-5">
+              <div>
+                <label className="block text-gray-300 text-sm font-medium mb-2">
+                  Correo Electronico
+                </label>
+                <div className="relative">
+                  <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                  <input
+                    type="email"
+                    value={resetEmail}
+                    onChange={(e) => validateResetEmail(e.target.value)}
+                    placeholder="ejemplo@empresa.com"
+                    disabled={isResetting}
+                    className={`w-full pl-12 pr-12 py-3 bg-black/30 border-2 rounded-xl text-white placeholder-gray-600 focus:outline-none transition-all duration-300 disabled:opacity-50 ${
+                      resetEmailValid === null
+                        ? 'border-gray-700 focus:border-cyan-500'
+                        : resetEmailValid
+                        ? 'border-emerald-500 focus:border-emerald-400'
+                        : 'border-red-500 focus:border-red-400'
+                    }`}
+                  />
+                  {resetEmailValid !== null && (
+                    <div className="absolute right-4 top-1/2 -translate-y-1/2">
+                      {resetEmailValid ? (
+                        <CheckCircle className="w-5 h-5 text-emerald-400" />
+                      ) : (
+                        <XCircle className="w-5 h-5 text-red-400" />
+                      )}
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <button
+                type="submit"
+                disabled={!resetEmailValid || isResetting}
+                className="w-full py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-semibold text-white hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
+                style={{
+                  boxShadow: resetEmailValid && !isResetting ? '0 0 30px rgba(6, 182, 212, 0.5)' : 'none'
+                }}
+              >
+                {isResetting ? (
+                  <span className="flex items-center justify-center gap-2">
+                    <Loader2 className="w-5 h-5 animate-spin" />
+                    Enviando...
+                  </span>
+                ) : (
+                  'Enviar enlace de recuperacion'
+                )}
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setShowForgotPassword(false)}
+                className="w-full py-3 bg-white/5 hover:bg-white/10 border border-gray-700 rounded-xl text-gray-300 font-medium transition-all duration-300 flex items-center justify-center gap-2"
+              >
+                <ArrowLeft className="w-4 h-4" />
+                Volver al inicio de sesion
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       <style>{`
         @keyframes pulse-hover {
