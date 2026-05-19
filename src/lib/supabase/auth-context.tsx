@@ -7,6 +7,8 @@ interface AuthContextType {
   session: Session | null
   isLoading: boolean
   isConfigured: boolean
+  isDemoMode: boolean
+  enterDemoMode: () => void
   signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string) => Promise<{ error: Error | null; needsConfirmation: boolean }>
   signInWithGoogle: () => Promise<{ error: Error | null }>
@@ -15,11 +17,25 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
 
+// Demo user for when Supabase is not configured
+const DEMO_USER: User = {
+  id: 'demo-user-id',
+  aud: 'authenticated',
+  role: 'authenticated',
+  email: 'demo@phishingsecurejd.com',
+  email_confirmed_at: new Date().toISOString(),
+  created_at: new Date().toISOString(),
+  updated_at: new Date().toISOString(),
+  app_metadata: {},
+  user_metadata: { name: 'Usuario Demo' },
+} as User
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [configured] = useState(() => isSupabaseConfigured())
+  const [isDemoMode, setIsDemoMode] = useState(false)
 
   useEffect(() => {
     const supabase = createClient()
@@ -100,7 +116,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error: error as Error | null }
   }
 
+  const enterDemoMode = () => {
+    setUser(DEMO_USER)
+    setIsDemoMode(true)
+    setIsLoading(false)
+  }
+
   const signOut = async () => {
+    if (isDemoMode) {
+      setUser(null)
+      setSession(null)
+      setIsDemoMode(false)
+      return
+    }
     const supabase = createClient()
     if (!supabase) return
     await supabase.auth.signOut()
@@ -112,6 +140,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       session,
       isLoading,
       isConfigured: configured,
+      isDemoMode,
+      enterDemoMode,
       signInWithPassword,
       signUp,
       signInWithGoogle,
