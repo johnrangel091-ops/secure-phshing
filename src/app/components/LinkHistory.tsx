@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { ExternalLink, Eye, Ban, X, Shield, Calendar, AlertTriangle, Server } from 'lucide-react';
+import { ExternalLink, Eye, Ban, X, Shield, Calendar, AlertTriangle, Server, FileDown } from 'lucide-react';
+import { jsPDF } from 'jspdf';
 
 interface AnalysisResult {
   id: number;
@@ -24,6 +25,131 @@ export function LinkHistory({ history, onBlock }: LinkHistoryProps) {
 
   const handleCloseDetails = () => {
     setSelectedItem(null);
+  };
+
+  const handleExportPDF = (item: AnalysisResult) => {
+    try {
+      const doc = new jsPDF();
+      
+      // Header
+      doc.setFillColor(6, 182, 212);
+      doc.rect(0, 0, 210, 40, 'F');
+      
+      doc.setTextColor(255, 255, 255);
+      doc.setFontSize(24);
+      doc.setFont('helvetica', 'bold');
+      doc.text('PhishingSecureJD', 20, 25);
+      
+      doc.setFontSize(10);
+      doc.setFont('helvetica', 'normal');
+      doc.text('Reporte de Analisis de Seguridad', 20, 35);
+      
+      // Body content
+      doc.setTextColor(50, 50, 50);
+      doc.setFontSize(12);
+      
+      let yPos = 60;
+      
+      // Date and Time
+      doc.setFont('helvetica', 'bold');
+      doc.text('Fecha y Hora del Analisis:', 20, yPos);
+      doc.setFont('helvetica', 'normal');
+      doc.text(item.date, 85, yPos);
+      yPos += 15;
+      
+      // URL Analyzed
+      doc.setFont('helvetica', 'bold');
+      doc.text('URL Analizada:', 20, yPos);
+      yPos += 8;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      // Handle long URLs by splitting
+      const urlLines = doc.splitTextToSize(item.url, 170);
+      doc.text(urlLines, 20, yPos);
+      yPos += (urlLines.length * 6) + 15;
+      
+      doc.setFontSize(12);
+      
+      // Risk Level
+      doc.setFont('helvetica', 'bold');
+      doc.text('Nivel de Riesgo:', 20, yPos);
+      doc.setFont('helvetica', 'normal');
+      
+      // Color based on risk
+      if (item.color === 'emerald') {
+        doc.setTextColor(16, 185, 129);
+      } else if (item.color === 'yellow') {
+        doc.setTextColor(245, 158, 11);
+      } else {
+        doc.setTextColor(239, 68, 68);
+      }
+      doc.text(item.risk, 70, yPos);
+      doc.setTextColor(50, 50, 50);
+      yPos += 15;
+      
+      // Security Score
+      doc.setFont('helvetica', 'bold');
+      doc.text('Score de Seguridad:', 20, yPos);
+      doc.setFont('helvetica', 'normal');
+      doc.text(`${item.score}%`, 78, yPos);
+      yPos += 20;
+      
+      // Score bar
+      doc.setFillColor(229, 231, 235);
+      doc.rect(20, yPos, 100, 8, 'F');
+      
+      if (item.color === 'emerald') {
+        doc.setFillColor(16, 185, 129);
+      } else if (item.color === 'yellow') {
+        doc.setFillColor(245, 158, 11);
+      } else {
+        doc.setFillColor(239, 68, 68);
+      }
+      doc.rect(20, yPos, item.score, 8, 'F');
+      yPos += 25;
+      
+      // Recommendations based on risk
+      doc.setFont('helvetica', 'bold');
+      doc.text('Recomendaciones:', 20, yPos);
+      yPos += 10;
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(10);
+      
+      if (item.color === 'emerald') {
+        doc.text('- Este sitio parece seguro para navegar', 25, yPos);
+        yPos += 7;
+        doc.text('- Verifica siempre que la URL sea la oficial', 25, yPos);
+      } else if (item.color === 'yellow') {
+        doc.text('- Procede con precaucion al navegar', 25, yPos);
+        yPos += 7;
+        doc.text('- No ingreses datos personales sensibles', 25, yPos);
+        yPos += 7;
+        doc.text('- Verifica la autenticidad del sitio', 25, yPos);
+      } else {
+        doc.text('- NO navegues en este sitio', 25, yPos);
+        yPos += 7;
+        doc.text('- No ingreses ninguna informacion personal', 25, yPos);
+        yPos += 7;
+        doc.text('- Reporta este sitio como sospechoso', 25, yPos);
+        yPos += 7;
+        doc.text('- Considera bloquear esta URL', 25, yPos);
+      }
+      
+      // Footer
+      doc.setFillColor(30, 30, 30);
+      doc.rect(0, 270, 210, 27, 'F');
+      doc.setTextColor(150, 150, 150);
+      doc.setFontSize(8);
+      doc.text('Reporte generado automaticamente por PhishingSecureJD Enterprise', 20, 280);
+      doc.text(`ID de Registro: ${item.id}`, 20, 286);
+      doc.text(`Generado: ${new Date().toLocaleString()}`, 120, 286);
+      
+      // Save the PDF
+      const filename = `PhishingSecureJD_Reporte_${item.id}.pdf`;
+      doc.save(filename);
+    } catch (error) {
+      console.error('Error generating PDF:', error);
+    }
   };
 
   return (
@@ -111,6 +237,14 @@ export function LinkHistory({ history, onBlock }: LinkHistoryProps) {
                           >
                             <Eye className="w-4 h-4" />
                             Detalles
+                          </button>
+                          <button
+                            onClick={() => handleExportPDF(item)}
+                            className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-400 text-sm font-medium transition-all duration-300"
+                            title="Exportar Reporte PDF"
+                          >
+                            <FileDown className="w-4 h-4" />
+                            PDF
                           </button>
                           <button
                             onClick={() => onBlock(item.id)}
