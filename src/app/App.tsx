@@ -667,13 +667,111 @@ function AppContent() {
           )}
 
           {activeSection === 'threats' && (
-            <div className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-cyan-500/20 rounded-2xl p-12 backdrop-blur-xl text-center animate-fadeIn">
-              <Database className="w-16 h-16 text-cyan-400 mx-auto mb-4" />
-              <h3 className="text-2xl font-bold text-white mb-2">Base de Datos de Amenazas</h3>
-              <p className="text-gray-400 mb-6">Esta sección mostrará un catálogo de amenazas conocidas y patrones de phishing detectados.</p>
-              <button className="px-6 py-3 bg-cyan-600 hover:bg-cyan-500 rounded-xl text-white font-semibold transition-all duration-300">
-                Explorar Amenazas
-              </button>
+            <div className="space-y-6 animate-fadeIn">
+              {/* Threat Database Header */}
+              <div className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-cyan-500/20 rounded-2xl p-6 backdrop-blur-xl">
+                <div className="flex items-center gap-4">
+                  <div className="p-4 bg-cyan-500/20 rounded-xl">
+                    <Database className="w-8 h-8 text-cyan-400" />
+                  </div>
+                  <div>
+                    <h3 className="text-2xl font-bold text-white">Base de Datos de Amenazas</h3>
+                    <p className="text-gray-400">Catálogo de URLs bloqueadas y amenazas detectadas</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Blocked URLs Table */}
+              <div className="bg-gradient-to-br from-red-950/30 to-red-900/20 border border-red-500/30 rounded-2xl backdrop-blur-xl overflow-hidden">
+                <div className="p-6 border-b border-red-500/30 bg-red-950/20">
+                  <h2 className="text-xl font-bold text-white flex items-center gap-2">
+                    <AlertTriangle className="w-5 h-5 text-red-400" />
+                    URLs Bloqueadas
+                  </h2>
+                  <p className="text-red-300/70 text-sm mt-1">Lista de amenazas identificadas y bloqueadas</p>
+                </div>
+
+                {blockedList.length === 0 ? (
+                  <div className="p-16 text-center">
+                    <Database className="w-12 h-12 text-red-700 mx-auto mb-3" />
+                    <h3 className="text-lg font-semibold text-red-400/70 mb-1">No hay amenazas registradas</h3>
+                    <p className="text-red-500/50 text-sm">Las URLs bloqueadas aparecerán aquí</p>
+                  </div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <table className="w-full">
+                        <thead>
+                          <tr className="border-b border-red-800/50">
+                            <th className="text-left px-6 py-4 text-red-300 font-semibold text-sm">URL</th>
+                            <th className="text-left px-6 py-4 text-red-300 font-semibold text-sm">Tipo de Amenaza</th>
+                            <th className="text-left px-6 py-4 text-red-300 font-semibold text-sm">Fecha de Bloqueo</th>
+                            <th className="text-center px-6 py-4 text-red-300 font-semibold text-sm">Acciones</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {blockedList.map((item) => (
+                            <tr
+                              key={item.id}
+                              className="border-b border-red-800/30 hover:bg-red-500/5 transition-all duration-300"
+                            >
+                              <td className="px-6 py-4">
+                                <div className="flex items-center gap-2">
+                                  <XCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
+                                  <span className="text-white font-medium truncate max-w-xs">
+                                    {item.url}
+                                  </span>
+                                </div>
+                              </td>
+                              <td className="px-6 py-4">
+                                <span className="inline-flex px-3 py-1 rounded-full text-xs font-semibold bg-red-500/20 text-red-400 border border-red-500/30">
+                                  {item.risk === 'Critico' ? 'Phishing Confirmado' : 
+                                   item.risk === 'Alto' ? 'Amenaza Alta' : 
+                                   item.risk === 'Medio' ? 'Sospechoso' : 'Precaución'}
+                                </span>
+                              </td>
+                              <td className="px-6 py-4 text-gray-400 text-sm">{item.date}</td>
+                              <td className="px-6 py-4">
+                                <div className="flex items-center justify-center">
+                                  <button
+                                    onClick={() => handleUnblockUrl(item.id)}
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-400 text-sm font-medium transition-all duration-300"
+                                  >
+                                    <CheckCircle className="w-4 h-4" />
+                                    Desbloquear
+                                  </button>
+                                </div>
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="p-4 border-t border-red-800/30 bg-red-950/10">
+                      <p className="text-red-400/70 text-sm text-center">
+                        {blockedList.length} amenaza{blockedList.length !== 1 ? 's' : ''} bloqueada{blockedList.length !== 1 ? 's' : ''} en total
+                      </p>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Stats */}
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-cyan-500/20 rounded-xl p-6">
+                  <p className="text-gray-400 text-sm">Total Amenazas</p>
+                  <p className="text-3xl font-bold text-white">{blockedList.length}</p>
+                </div>
+                <div className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-red-500/20 rounded-xl p-6">
+                  <p className="text-gray-400 text-sm">Riesgo Crítico</p>
+                  <p className="text-3xl font-bold text-red-400">{blockedList.filter(i => i.risk === 'Critico' || i.risk === 'Alto').length}</p>
+                </div>
+                <div className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-yellow-500/20 rounded-xl p-6">
+                  <p className="text-gray-400 text-sm">Riesgo Medio</p>
+                  <p className="text-3xl font-bold text-yellow-400">{blockedList.filter(i => i.risk === 'Medio').length}</p>
+                </div>
+              </div>
             </div>
           )}
 
