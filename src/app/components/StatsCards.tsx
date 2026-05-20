@@ -1,5 +1,5 @@
 import { Shield, AlertTriangle, TrendingUp, Activity, CheckCircle, Target } from 'lucide-react';
-import { useEffect, useState } from 'react';
+import { useMemo } from 'react';
 
 interface AnalysisResult {
   id: number;
@@ -10,45 +10,34 @@ interface AnalysisResult {
   color: string;
 }
 
-export function StatsCards() {
-  const [stats, setStats] = useState({ 
-    total: 0, 
-    threats: 0, 
-    safe: 0,
-    effectiveness: 0 
-  });
+interface StatsCardsProps {
+  history: AnalysisResult[];
+  blockedList: AnalysisResult[];
+}
 
-  useEffect(() => {
-    const updateStats = () => {
-      const history: AnalysisResult[] = JSON.parse(localStorage.getItem('phishguard_history') || '[]');
-      const blocked: AnalysisResult[] = JSON.parse(localStorage.getItem('phishguard_blocked') || '[]');
-      
-      // Combinar historial y bloqueados para estadisticas globales
-      const allAnalyzed = [...history, ...blocked];
-      const total = allAnalyzed.length;
-      
-      // Contar amenazas (Alto, Critico, Medio)
-      const threats = allAnalyzed.filter(item => 
-        item.risk === 'Alto' || item.risk === 'Critico' || item.risk === 'Medio'
-      ).length;
-      
-      // Contar seguros (Bajo, Seguro)
-      const safe = allAnalyzed.filter(item => 
-        item.risk === 'Bajo' || item.risk === 'Seguro'
-      ).length;
-      
-      // Calcular efectividad: porcentaje de deteccion correcta
-      // Efectividad = (amenazas detectadas + seguros verificados) / total * 100
-      const effectiveness = total > 0 ? Math.round(((threats + safe) / total) * 100) : 0;
-      
-      setStats({ total, threats, safe, effectiveness });
-    };
-
-    updateStats();
-    // Actualizar cada 500ms para tiempo real
-    const interval = setInterval(updateStats, 500);
-    return () => clearInterval(interval);
-  }, []);
+export function StatsCards({ history, blockedList }: StatsCardsProps) {
+  // Calcular estadisticas directamente desde los props (datos de Supabase)
+  const stats = useMemo(() => {
+    // Combinar historial y bloqueados para estadisticas globales
+    const allAnalyzed = [...history, ...blockedList];
+    const total = allAnalyzed.length;
+    
+    // Contar amenazas (Alto, Critico, Medio)
+    const threats = allAnalyzed.filter(item => 
+      item.risk === 'Alto' || item.risk === 'Critico' || item.risk === 'Medio'
+    ).length;
+    
+    // Contar seguros (Bajo, Seguro)
+    const safe = allAnalyzed.filter(item => 
+      item.risk === 'Bajo' || item.risk === 'Seguro'
+    ).length;
+    
+    // Calcular efectividad: porcentaje de deteccion correcta
+    // Efectividad = (amenazas detectadas + seguros verificados) / total * 100
+    const effectiveness = total > 0 ? Math.round(((threats + safe) / total) * 100) : 0;
+    
+    return { total, threats, safe, effectiveness };
+  }, [history, blockedList]);
 
   return (
     <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
