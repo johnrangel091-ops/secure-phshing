@@ -14,9 +14,10 @@ interface AnalysisResult {
 interface LinkHistoryProps {
   history: AnalysisResult[];
   onBlock: (id: number) => void;
+  isLoading?: boolean;
 }
 
-export function LinkHistory({ history, onBlock }: LinkHistoryProps) {
+export function LinkHistory({ history, onBlock, isLoading = false }: LinkHistoryProps) {
   const [selectedItem, setSelectedItem] = useState<AnalysisResult | null>(null);
 
   const handleOpenDetails = (item: AnalysisResult) => {
@@ -164,8 +165,17 @@ export function LinkHistory({ history, onBlock }: LinkHistoryProps) {
           <p className="text-gray-400 text-sm mt-1">Últimas URLs escaneadas por el sistema</p>
         </div>
 
-        {/* Table or Empty State */}
-        {history.length === 0 ? (
+        {/* Table or Empty State or Loading State */}
+        {isLoading ? (
+          <div className="p-20 text-center">
+            <div className="relative">
+              <ExternalLink className="w-16 h-16 text-cyan-400 mx-auto mb-4 animate-pulse" />
+              <div className="absolute inset-0 w-16 h-16 mx-auto border-2 border-cyan-400/50 rounded-full animate-ping"></div>
+            </div>
+            <h3 className="text-xl font-semibold text-gray-400 mb-2">Cargando historial...</h3>
+            <p className="text-gray-600">Sincronizando datos desde la nube</p>
+          </div>
+        ) : history.length === 0 ? (
           <div className="p-20 text-center">
             <ExternalLink className="w-16 h-16 text-gray-700 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-400 mb-2">No hay análisis recientes</h3>

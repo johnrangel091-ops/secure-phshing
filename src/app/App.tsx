@@ -322,6 +322,7 @@ function AppContent() {
 
     // Usar el algoritmo de deteccion real
     const analysis = analyzeUrlForPhishing(url);
+    const analyzedUrl = url; // Guardar la URL antes de limpiarla
 
     const now = new Date();
     const dateStr = now.toLocaleString('es-ES', {
@@ -332,14 +333,24 @@ function AppContent() {
       minute: '2-digit'
     });
 
-    // Guardar en Supabase con el email del usuario
+    // Crear el resultado del analisis
+    let newResult: AnalysisResult = {
+      id: Date.now(), // ID temporal si no hay Supabase
+      url: analyzedUrl,
+      date: dateStr,
+      risk: analysis.risk,
+      score: analysis.score,
+      color: analysis.color
+    };
+
+    // Guardar en Supabase con el email del usuario (si esta configurado)
     if (isSupabaseConfigured) {
       try {
         const supabase = createClient();
         const { data: insertedData, error: insertError } = await supabase
           .from('analysis_history')
           .insert({
-            url: url,
+            url: analyzedUrl,
             user_email: user.email,
             risk: analysis.risk,
             score: analysis.score,
@@ -352,8 +363,10 @@ function AppContent() {
 
         if (insertError) {
           console.error('[v0] Error saving analysis to Supabase:', insertError);
+          // Continuar mostrando resultados aunque falle el guardado
         } else if (insertedData) {
-          const newResult: AnalysisResult = {
+          // Usar el ID real de Supabase
+          newResult = {
             id: insertedData.id,
             url: insertedData.url,
             date: dateStr,
@@ -361,16 +374,17 @@ function AppContent() {
             score: insertedData.score,
             color: insertedData.color
           };
-
-          setCurrentResult(newResult);
-          setAnalysisReasons(analysis.reasons);
-          setHistory(prev => [newResult, ...prev]);
         }
       } catch (error) {
         console.error('[v0] Error in handleAnalyze:', error);
+        // Continuar mostrando resultados aunque falle el guardado
       }
     }
 
+    // SIEMPRE mostrar los resultados del analisis, independientemente de Supabase
+    setCurrentResult(newResult);
+    setAnalysisReasons(analysis.reasons);
+    setHistory(prev => [newResult, ...prev]);
     setIsScanning(false);
     setShowResults(true);
     setUrl('');
@@ -817,10 +831,11 @@ function AppContent() {
 
               {/* Link History */}
               <div className="mt-8">
-                <LinkHistory
-                  history={history}
-                  onBlock={handleBlockUrl}
-                />
+<LinkHistory
+  history={history}
+  onBlock={handleBlockUrl}
+  isLoading={isLoadingHistory}
+  />
               </div>
 
               {/* Blocked List */}
