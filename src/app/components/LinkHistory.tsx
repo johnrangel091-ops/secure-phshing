@@ -167,24 +167,24 @@ export function LinkHistory({ history, onBlock, isLoading = false }: LinkHistory
 
         {/* Table or Empty State or Loading State */}
         {isLoading ? (
-          <div className="p-20 text-center">
+          <div className="p-12 sm:p-20 text-center">
             <div className="relative">
-              <ExternalLink className="w-16 h-16 text-cyan-400 mx-auto mb-4 animate-pulse" />
-              <div className="absolute inset-0 w-16 h-16 mx-auto border-2 border-cyan-400/50 rounded-full animate-ping"></div>
+              <ExternalLink className="w-12 sm:w-16 h-12 sm:h-16 text-cyan-400 mx-auto mb-4 animate-pulse" />
+              <div className="absolute inset-0 w-12 sm:w-16 h-12 sm:h-16 mx-auto border-2 border-cyan-400/50 rounded-full animate-ping"></div>
             </div>
-            <h3 className="text-xl font-semibold text-gray-400 mb-2">Cargando historial...</h3>
-            <p className="text-gray-600">Sincronizando datos desde la nube</p>
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-400 mb-2">Cargando historial...</h3>
+            <p className="text-gray-600 text-sm sm:text-base">Sincronizando datos desde la nube</p>
           </div>
         ) : history.length === 0 ? (
-          <div className="p-20 text-center">
-            <ExternalLink className="w-16 h-16 text-gray-700 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-gray-400 mb-2">No hay análisis recientes</h3>
-            <p className="text-gray-600">Los enlaces que analices aparecerán aquí</p>
+          <div className="p-12 sm:p-20 text-center">
+            <ExternalLink className="w-12 sm:w-16 h-12 sm:h-16 text-gray-700 mx-auto mb-4" />
+            <h3 className="text-lg sm:text-xl font-semibold text-gray-400 mb-2">No hay análisis recientes</h3>
+            <p className="text-gray-600 text-sm sm:text-base">Los enlaces que analices aparecerán aquí</p>
           </div>
         ) : (
           <>
             <div className="overflow-x-auto">
-              <table className="w-full">
+              <table className="w-full min-w-[700px]">
                 <thead>
                   <tr className="border-b border-gray-800">
                     <th className="text-left px-6 py-4 text-gray-400 font-semibold text-sm">URL Analizada</th>
@@ -272,7 +272,7 @@ export function LinkHistory({ history, onBlock, isLoading = false }: LinkHistory
             </div>
 
             {/* Pagination */}
-            <div className="p-4 border-t border-gray-800 flex items-center justify-between">
+            <div className="p-4 border-t border-gray-800 flex flex-col sm:flex-row items-center justify-between gap-3">
               <p className="text-gray-500 text-sm">Mostrando {history.length} registro{history.length !== 1 ? 's' : ''}</p>
               <div className="flex gap-2">
                 <button className="px-4 py-2 bg-gray-800 hover:bg-gray-700 rounded-lg text-gray-400 hover:text-white text-sm transition-all duration-300">

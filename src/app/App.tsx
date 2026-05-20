@@ -526,7 +526,7 @@ function AppContent() {
       />
 
       {/* Main Content */}
-      <main className="flex-1 overflow-auto">
+      <main className="flex-1 overflow-auto pt-16 lg:pt-0">
         {/* Animated Background */}
         <div className="fixed inset-0 opacity-10 pointer-events-none">
           <div className="absolute top-1/4 left-1/2 w-96 h-96 bg-cyan-500 rounded-full blur-[128px] animate-pulse"></div>
@@ -534,10 +534,10 @@ function AppContent() {
         </div>
 
         {/* Content Area */}
-        <div className="relative z-10 p-8">
+        <div className="relative z-10 p-4 sm:p-6 lg:p-8">
           {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-white mb-2">
+          <div className="mb-6 lg:mb-8">
+            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
               {activeSection === 'dashboard' && 'Panel Principal'}
               {activeSection === 'history' && 'Historial de Análisis'}
               {activeSection === 'threats' && 'Base de Datos de Amenazas'}
@@ -557,11 +557,11 @@ function AppContent() {
               <StatsCards history={history} blockedList={blockedList} />
 
               {/* Scanner Section */}
-              <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 mb-6 lg:mb-8">
                 <div className="lg:col-span-2">
-                  <div className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-cyan-500/20 rounded-2xl p-8 backdrop-blur-xl">
-                    <div className="text-center mb-8">
-                      <h2 className="text-2xl font-bold mb-2 bg-gradient-to-r from-white via-cyan-200 to-blue-200 bg-clip-text text-transparent">
+                  <div className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-cyan-500/20 rounded-2xl p-4 sm:p-6 lg:p-8 backdrop-blur-xl">
+                    <div className="text-center mb-6 lg:mb-8">
+                      <h2 className="text-xl sm:text-2xl font-bold mb-2 bg-gradient-to-r from-white via-cyan-200 to-blue-200 bg-clip-text text-transparent">
                         Analizar Nueva URL
                       </h2>
                       <p className="text-gray-400">
@@ -577,15 +577,15 @@ function AppContent() {
                           value={url}
                           onChange={(e) => setUrl(e.target.value)}
                           placeholder="https://ejemplo-sospechoso.com"
-                          className="w-full px-8 py-5 bg-black/30 border-2 border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 transition-all duration-300"
+                          className="w-full px-4 sm:px-8 py-4 sm:py-5 bg-black/30 border-2 border-gray-800 rounded-xl text-white placeholder-gray-500 focus:outline-none focus:border-cyan-500 transition-all duration-300 text-sm sm:text-base"
                         />
-                        <Globe className="absolute right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600" />
+                        <Globe className="absolute right-4 sm:right-6 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-600" />
                       </div>
 
                       <button
                         onClick={handleAnalyze}
                         disabled={!url || isScanning}
-                        className="w-full mt-4 px-8 py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-semibold hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group animate-pulse-hover"
+                        className="w-full mt-4 px-6 sm:px-8 py-3 sm:py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-semibold hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group text-sm sm:text-base"
                         style={{
                           boxShadow: url && !isScanning ? '0 0 30px rgba(6, 182, 212, 0.5)' : 'none'
                         }}
