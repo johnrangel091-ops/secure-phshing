@@ -126,32 +126,32 @@ export function LoginForm() {
   };
 
   return (
-    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-6 relative overflow-hidden">
+    <div className="min-h-screen bg-[#050505] flex items-center justify-center p-4 sm:p-6 relative overflow-hidden">
       {/* Animated Background */}
       <div className="absolute inset-0 opacity-20">
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-cyan-500 rounded-full blur-[128px] animate-pulse"></div>
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-blue-600 rounded-full blur-[128px] animate-pulse" style={{ animationDelay: '1s' }}></div>
+        <div className="absolute top-1/4 left-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-cyan-500 rounded-full blur-[128px] animate-pulse"></div>
+        <div className="absolute bottom-1/4 right-1/4 w-64 sm:w-96 h-64 sm:h-96 bg-blue-600 rounded-full blur-[128px] animate-pulse" style={{ animationDelay: '1s' }}></div>
       </div>
 
       {/* Login Card */}
       <div className="relative z-10 w-full max-w-md">
         {/* Logo */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center mb-4">
-            <Logo className="w-20 h-20" />
+        <div className="text-center mb-6 sm:mb-8">
+          <div className="inline-flex items-center justify-center mb-3 sm:mb-4">
+            <Logo className="w-16 h-16 sm:w-20 sm:h-20" />
           </div>
-          <h1 className="text-3xl font-bold text-white mb-2">Iniciar Sesión - PhishingSecureJD</h1>
-          <p className="text-gray-400">Plataforma de Entrenamiento en Seguridad contra Phishing</p>
+          <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">Iniciar Sesion</h1>
+          <p className="text-gray-400 text-sm sm:text-base">Plataforma de Entrenamiento en Seguridad</p>
         </div>
 
         {/* Form Container */}
-        <div className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-cyan-500/30 rounded-2xl p-8 backdrop-blur-xl shadow-2xl">
+        <div className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-cyan-500/30 rounded-xl sm:rounded-2xl p-5 sm:p-8 backdrop-blur-xl shadow-2xl">
           {/* Tabs */}
-          <div className="flex gap-4 mb-8">
+          <div className="flex gap-2 sm:gap-4 mb-6 sm:mb-8">
             <button
               onClick={() => { setIsLogin(true); setError(null); setSuccessMessage(null); }}
               disabled={isLoading}
-              className={`flex-1 py-3 rounded-xl font-semibold transition-all duration-300 ${
+              className={`flex-1 py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base transition-all duration-300 ${
                 isLogin
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
                   : 'bg-white/5 text-gray-400 hover:text-white'
@@ -162,7 +162,7 @@ export function LoginForm() {
             <button
               onClick={() => { setIsLogin(false); setError(null); setSuccessMessage(null); }}
               disabled={isLoading}
-              className={`flex-1 py-3 rounded-xl font-semibold transition-all duration-300 ${
+              className={`flex-1 py-2.5 sm:py-3 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base transition-all duration-300 ${
                 !isLogin
                   ? 'bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-lg shadow-cyan-500/30'
                   : 'bg-white/5 text-gray-400 hover:text-white'
@@ -174,9 +174,9 @@ export function LoginForm() {
 
           {/* Error Message */}
           {error && (
-            <div className="mb-6 p-4 bg-red-500/10 border border-red-500/30 rounded-xl">
-              <p className="text-red-400 text-sm flex items-center gap-2">
-                <XCircle className="w-4 h-4" />
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-red-500/10 border border-red-500/30 rounded-lg sm:rounded-xl">
+              <p className="text-red-400 text-xs sm:text-sm flex items-center gap-2">
+                <XCircle className="w-4 h-4 flex-shrink-0" />
                 {error}
               </p>
             </div>
@@ -184,15 +184,15 @@ export function LoginForm() {
 
           {/* Success Message */}
           {successMessage && (
-            <div className="mb-6 p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl">
-              <p className="text-emerald-400 text-sm flex items-center gap-2">
-                <CheckCircle className="w-4 h-4" />
+            <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-lg sm:rounded-xl">
+              <p className="text-emerald-400 text-xs sm:text-sm flex items-center gap-2">
+                <CheckCircle className="w-4 h-4 flex-shrink-0" />
                 {successMessage}
               </p>
             </div>
           )}
 
-          <form onSubmit={handleSubmit} className="space-y-5">
+          <form onSubmit={handleSubmit} className="space-y-4 sm:space-y-5">
             {/* Email Field */}
             <div>
               <label className="block text-gray-300 text-sm font-medium mb-2">
@@ -288,7 +288,7 @@ export function LoginForm() {
             <button
               type="submit"
               disabled={!emailValid || !passwordValid || isLoading}
-              className="w-full py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-xl font-semibold text-white hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
+              className="w-full py-3 sm:py-4 bg-gradient-to-r from-cyan-600 to-blue-600 rounded-lg sm:rounded-xl font-semibold text-sm sm:text-base text-white hover:from-cyan-500 hover:to-blue-500 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed relative overflow-hidden group"
               style={{
                 boxShadow: emailValid && passwordValid && !isLoading ? '0 0 30px rgba(6, 182, 212, 0.5)' : 'none'
               }}
@@ -296,8 +296,8 @@ export function LoginForm() {
               <span className="relative z-10 flex items-center justify-center gap-2">
                 {isLoading ? (
                   <>
-                    <Loader2 className="w-5 h-5 animate-spin" />
-                    {isLogin ? 'Iniciando sesion...' : 'Creando cuenta...'}
+                    <Loader2 className="w-4 h-4 sm:w-5 sm:h-5 animate-spin" />
+                    <span className="text-sm sm:text-base">{isLogin ? 'Iniciando sesion...' : 'Creando cuenta...'}</span>
                   </>
                 ) : (
                   isLogin ? 'Acceder a la Plataforma' : 'Crear Cuenta'
@@ -308,7 +308,7 @@ export function LoginForm() {
           </form>
         </div>
 
-        <p className="text-center text-gray-500 text-sm mt-6">
+        <p className="text-center text-gray-500 text-xs sm:text-sm mt-4 sm:mt-6">
           2026 PhishingSecureJD. Todos los derechos reservados.
         </p>
       </div>
