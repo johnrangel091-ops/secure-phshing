@@ -41,61 +41,72 @@ function AppContent() {
     try {
       const supabase = createClient();
       
-      // Cargar historial del usuario actual desde tabla historial_accesos
+      // Cargar historial del usuario actual desde historial_accesos
       const { data: historyData, error: historyError } = await supabase
         .from('historial_accesos')
         .select('*')
         .eq('correo electrónico', user.email)
+        .eq('is_blocked', false)
         .order('fecha_ingreso', { ascending: false });
       
       if (historyError) {
         console.error('[v0] Error loading history:', historyError);
       } else if (historyData) {
         const formattedHistory: AnalysisResult[] = historyData.map((item: {
-          identificación: number;
+          id: number;
           url: string;
-          fecha_ingreso: string;
+          created_at: string;
           risk: string;
           score: number;
           color: string;
-          is_blocked?: boolean;
         }) => ({
-          id: item.identificación,
-          url: item.url || 'URL no disponible',
-          date: new Date(item.fecha_ingreso).toLocaleString('es-ES', {
+          id: item.id,
+          url: item.url,
+          date: new Date(item.created_at).toLocaleString('es-ES', {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
             hour: '2-digit',
             minute: '2-digit'
           }),
-          risk: item.risk || 'Desconocido',
-          score: item.score || 0,
-          color: item.color || 'yellow'
-        })).filter((item: { is_blocked?: boolean }) => !item.is_blocked);
+          risk: item.risk,
+          score: item.score,
+          color: item.color
+        }));
         setHistory(formattedHistory);
-        
-        // Filtrar bloqueados del mismo dataset
-        const formattedBlocked: AnalysisResult[] = historyData.filter((item: { is_blocked?: boolean }) => item.is_blocked).map((item: {
-          identificación: number;
+      }
+
+      // Cargar lista de bloqueados del usuario actual
+      const { data: blockedData, error: blockedError } = await supabase
+        .from('analysis_history')
+        .select('*')
+        .eq('user_email', user.email)
+        .eq('is_blocked', true)
+        .order('created_at', { ascending: false });
+      
+      if (blockedError) {
+        console.error('[v0] Error loading blocked list:', blockedError);
+      } else if (blockedData) {
+        const formattedBlocked: AnalysisResult[] = blockedData.map((item: {
+          id: number;
           url: string;
-          fecha_ingreso: string;
+          created_at: string;
           risk: string;
           score: number;
           color: string;
         }) => ({
-          id: item.identificación,
-          url: item.url || 'URL no disponible',
-          date: new Date(item.fecha_ingreso).toLocaleString('es-ES', {
+          id: item.id,
+          url: item.url,
+          date: new Date(item.created_at).toLocaleString('es-ES', {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
             hour: '2-digit',
             minute: '2-digit'
           }),
-          risk: item.risk || 'Desconocido',
-          score: item.score || 0,
-          color: item.color || 'yellow'
+          risk: item.risk,
+          score: item.score,
+          color: item.color
         }));
         setBlockedList(formattedBlocked);
       }
@@ -339,15 +350,15 @@ function AppContent() {
       try {
         const supabase = createClient();
         const { data: insertedData, error: insertError } = await supabase
-          .from('historial_accesos')
+          .from('analysis_history')
           .insert({
             url: analyzedUrl,
-            'correo electrónico': user.email,
+            user_email: user.email,
             risk: analysis.risk,
             score: analysis.score,
             color: analysis.color,
             is_blocked: false,
-            fecha_ingreso: now.toISOString()
+            created_at: now.toISOString()
           })
           .select()
           .single();
@@ -358,7 +369,7 @@ function AppContent() {
         } else if (insertedData) {
           // Usar el ID real de Supabase
           newResult = {
-            id: insertedData.identificación,
+            id: insertedData.id,
             url: insertedData.url,
             date: dateStr,
             risk: insertedData.risk,
@@ -403,28 +414,22 @@ function AppContent() {
         try {
           const supabase = createClient();
           const { error } = await supabase
-            .from('historial_accesos')
+            .from('analysis_history')
             .update({ is_blocked: true })
-            .eq('identificación', id);
+            .eq('id', id);
           
           if (error) {
             console.error('[v0] Error blocking URL:', error);
-            toast.error('Error al bloquear el enlace');
             return;
           }
         } catch (error) {
           console.error('[v0] Error in handleBlockUrl:', error);
-          toast.error('Error al bloquear el enlace');
           return;
         }
       }
       
       setBlockedList(prev => [itemToBlock, ...prev]);
       setHistory(prev => prev.filter(item => item.id !== id));
-      toast.success('Enlace bloqueado con exito', {
-        description: `La URL "${itemToBlock.url.substring(0, 50)}${itemToBlock.url.length > 50 ? '...' : ''}" ha sido bloqueada.`,
-        duration: 4000,
-      });
     }
   };
 
@@ -436,28 +441,22 @@ function AppContent() {
         try {
           const supabase = createClient();
           const { error } = await supabase
-            .from('historial_accesos')
+            .from('analysis_history')
             .update({ is_blocked: false })
-            .eq('identificación', id);
+            .eq('id', id);
           
           if (error) {
             console.error('[v0] Error unblocking URL:', error);
-            toast.error('Error al desbloquear el enlace');
             return;
           }
         } catch (error) {
           console.error('[v0] Error in handleUnblockUrl:', error);
-          toast.error('Error al desbloquear el enlace');
           return;
         }
       }
       
       setHistory(prev => [itemToUnblock, ...prev]);
       setBlockedList(prev => prev.filter(item => item.id !== id));
-      toast.success('Enlace desbloqueado con exito', {
-        description: `La URL "${itemToUnblock.url.substring(0, 50)}${itemToUnblock.url.length > 50 ? '...' : ''}" ha sido desbloqueada.`,
-        duration: 4000,
-      });
     }
   };
 
@@ -467,13 +466,12 @@ function AppContent() {
     try {
       const supabase = createClient();
       const { error } = await supabase
-        .from('historial_accesos')
+        .from('analysis_history')
         .delete()
-        .eq('correo electrónico', user.email);
+        .eq('user_email', user.email);
       
       if (error) {
         console.error('[v0] Error clearing history:', error);
-        toast.error('Error al limpiar el historial');
         return;
       }
       
@@ -546,14 +544,12 @@ function AppContent() {
               {activeSection === 'history' && 'Historial de Análisis'}
               {activeSection === 'threats' && 'Base de Datos de Amenazas'}
               {activeSection === 'settings' && 'Configuración'}
-              {activeSection === 'documentation' && 'Cómo Funciona'}
             </h1>
             <p className="text-gray-400">
               {activeSection === 'dashboard' && 'Monitorea y analiza URLs en tiempo real'}
               {activeSection === 'history' && 'Revisa todos los análisis realizados'}
               {activeSection === 'threats' && 'Explora amenazas conocidas y patrones de phishing'}
               {activeSection === 'settings' && 'Personaliza tu experiencia de seguridad'}
-              {activeSection === 'documentation' && 'Aprende a usar PhishingSecureJD'}
             </p>
           </div>
 
@@ -982,25 +978,8 @@ function AppContent() {
               onThemeChange={handleThemeChange}
             />
           )}
-
-          {activeSection === 'documentation' && (
-            <Documentation />
-          )}
         </div>
       </main>
-
-      {/* Toast notifications */}
-      <Toaster 
-        position="top-right" 
-        richColors 
-        toastOptions={{
-          style: {
-            background: isDarkMode ? '#1f2937' : '#ffffff',
-            border: '1px solid rgba(6, 182, 212, 0.3)',
-            color: isDarkMode ? '#ffffff' : '#111827',
-          },
-        }}
-      />
 
       {/* Global CSS Animations */}
       <style>{`
