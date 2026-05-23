@@ -1,4 +1,4 @@
-import { LayoutDashboard, History, Database, Settings, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, History, Database, Settings, LogOut, Menu, X, BookOpen } from 'lucide-react';
 import { Logo } from './Logo';
 import { useAuth } from '../../lib/supabase/auth-context';
 import { useState, useEffect } from 'react';
@@ -17,6 +17,7 @@ export function Sidebar({ activeSection, onNavigate, onLogout }: SidebarProps) {
     { id: 'dashboard', label: 'Panel Principal', icon: LayoutDashboard },
     { id: 'history', label: 'Historial de Análisis', icon: History },
     { id: 'threats', label: 'Base de Amenazas', icon: Database },
+    { id: 'documentation', label: 'Documentación', icon: BookOpen },
     { id: 'settings', label: 'Configuración', icon: Settings },
   ];
 
