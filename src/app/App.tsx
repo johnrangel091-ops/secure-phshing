@@ -9,7 +9,7 @@ import { BlockedList } from './components/BlockedList';
 import { Settings } from './components/Settings';
 import { Documentation } from './components/Documentation';
 import { AuthProvider, useAuth } from '../lib/supabase/auth-context';
-import { createClient, isSupabaseConfigured } from '../lib/supabase/client';
+import { createClient, isSupabaseConfigured } from '../lib/supabase/supabaseClient';
 import { toast, Toaster } from 'sonner';
 
 // Alert component for block success
@@ -50,13 +50,62 @@ function BlockSuccessAlert({ show, onClose }: BlockAlertProps) {
   );
 }
 
+type EstadoAcceso = 'Pendiente' | 'Seguro' | 'Sospechoso';
+
 interface AnalysisResult {
   id: number;
   url: string;
   date: string;
+  estado: EstadoAcceso;
+  bloqueado: boolean;
   risk: string;
   score: number;
   color: string;
+}
+
+/** Mapea el resultado del detector a los valores de la columna `estado` en Supabase. */
+function mapRiskToEstado(risk: string): EstadoAcceso {
+  if (risk === 'Seguro' || risk === 'Bajo') return 'Seguro';
+  if (risk === 'Medio' || risk === 'Alto' || risk === 'Critico') return 'Sospechoso';
+  return 'Pendiente';
+}
+
+function formatHistorialDate(isoDate: string): string {
+  return new Date(isoDate).toLocaleString('es-ES', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+interface HistorialRow {
+  id: number;
+  url: string;
+  estado: EstadoAcceso;
+  bloqueado: boolean;
+  created_at: string;
+}
+
+function rowToAnalysisResult(item: HistorialRow): AnalysisResult {
+  const estado = (item.estado ?? 'Pendiente') as EstadoAcceso;
+  const risk =
+    estado === 'Seguro' ? 'Seguro' : estado === 'Sospechoso' ? 'Alto' : 'Pendiente';
+  const score = estado === 'Seguro' ? 95 : estado === 'Sospechoso' ? 25 : 50;
+  const color =
+    estado === 'Seguro' ? 'emerald' : estado === 'Sospechoso' ? 'red' : 'yellow';
+
+  return {
+    id: item.id,
+    url: item.url,
+    date: formatHistorialDate(item.created_at),
+    estado,
+    bloqueado: Boolean(item.bloqueado),
+    risk,
+    score,
+    color,
+  };
 }
 
 function AppContent() {
@@ -72,100 +121,44 @@ function AppContent() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [showBlockAlert, setShowBlockAlert] = useState(false);
 
-  // Funcion para cargar historial desde Supabase filtrado por email del usuario
+  // Cargar historial desde Supabase (historial_accesos)
   const loadHistoryFromSupabase = useCallback(async () => {
-    if (!user?.email || !isSupabaseConfigured) return;
-    
+    if (!isSupabaseConfigured) return;
+
     setIsLoadingHistory(true);
     try {
       const supabase = createClient();
-      
-      // Cargar historial del usuario actual desde historial_accesos (no bloqueados)
-      const { data: historyData, error: historyError } = await supabase
+
+      const { data, error } = await supabase
         .from('historial_accesos')
-        .select('*')
-        .eq('correo_electronico', user.email)
-        .eq('is_blocked', false)
-        .order('fecha_ingreso', { ascending: false });
-      
-      if (historyError) {
-        console.error('[v0] Error loading history:', historyError);
-      } else if (historyData) {
-        const formattedHistory: AnalysisResult[] = historyData.map((item: {
-          id: number;
-          url: string;
-          fecha_ingreso: string;
-          risk: string;
-          score: number;
-          color: string;
-        }) => ({
-          id: item.id,
-          url: item.url,
-          date: new Date(item.fecha_ingreso).toLocaleString('es-ES', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-          }),
-          risk: item.risk,
-          score: item.score,
-          color: item.color
-        }));
-        setHistory(formattedHistory);
+        .select('id, url, estado, bloqueado, created_at')
+        .order('created_at', { ascending: false });
+
+      if (error) {
+        console.error('[PhishingSecureJD] Error loading history:', error);
+        return;
       }
 
-      // Cargar lista de bloqueados del usuario actual desde historial_accesos
-      const { data: blockedData, error: blockedError } = await supabase
-        .from('historial_accesos')
-        .select('*')
-        .eq('correo_electronico', user.email)
-        .eq('is_blocked', true)
-        .order('fecha_ingreso', { ascending: false });
-      
-      if (blockedError) {
-        console.error('[v0] Error loading blocked list:', blockedError);
-      } else if (blockedData) {
-        const formattedBlocked: AnalysisResult[] = blockedData.map((item: {
-          id: number;
-          url: string;
-          fecha_ingreso: string;
-          risk: string;
-          score: number;
-          color: string;
-        }) => ({
-          id: item.id,
-          url: item.url,
-          date: new Date(item.fecha_ingreso).toLocaleString('es-ES', {
-            year: 'numeric',
-            month: '2-digit',
-            day: '2-digit',
-            hour: '2-digit',
-            minute: '2-digit'
-          }),
-          risk: item.risk,
-          score: item.score,
-          color: item.color
-        }));
-        setBlockedList(formattedBlocked);
-      }
+      const rows = (data ?? []) as HistorialRow[];
+      const all = rows.map(rowToAnalysisResult);
+      setHistory(all.filter((item) => !item.bloqueado));
+      setBlockedList(all.filter((item) => item.bloqueado));
     } catch (error) {
-      console.error('[v0] Error in loadHistoryFromSupabase:', error);
+      console.error('[PhishingSecureJD] Error in loadHistoryFromSupabase:', error);
     } finally {
       setIsLoadingHistory(false);
     }
-  }, [user?.email]);
+  }, []);
 
-  // Cargar historial cuando el usuario inicia sesion
+  // Cargar historial al montar (y cuando el usuario inicia sesion)
   useEffect(() => {
-    if (user?.email && isSupabaseConfigured) {
+    if (user && isSupabaseConfigured) {
       loadHistoryFromSupabase();
-    } else {
-      // Limpiar historial si no hay usuario
+    } else if (!user) {
       setHistory([]);
       setBlockedList([]);
     }
-  }, [user?.email, loadHistoryFromSupabase]);
+  }, [user, loadHistoryFromSupabase]);
 
   // Load dark mode preference from localStorage (solo preferencia de tema)
   useEffect(() => {
@@ -374,53 +367,48 @@ function AppContent() {
       minute: '2-digit'
     });
 
+    const estado = mapRiskToEstado(analysis.risk);
+
     // Crear el resultado del analisis
     let newResult: AnalysisResult = {
-      id: Date.now(), // ID temporal si no hay Supabase
+      id: Date.now(),
       url: analyzedUrl,
       date: dateStr,
+      estado,
+      bloqueado: false,
       risk: analysis.risk,
       score: analysis.score,
-      color: analysis.color
+      color: analysis.color,
     };
 
-    // Guardar en Supabase con el email del usuario (si esta configurado)
     if (isSupabaseConfigured) {
       try {
         const supabase = createClient();
         const { data: insertedData, error: insertError } = await supabase
           .from('historial_accesos')
           .insert({
-            identificacion: `URL-${Date.now()}`,
-            usuario_id: user.id,
-            correo_electronico: user.email,
-            fecha_ingreso: now.toISOString(),
             url: analyzedUrl,
-            risk: analysis.risk,
-            score: analysis.score,
-            color: analysis.color,
-            is_blocked: false
+            estado,
+            bloqueado: false,
           })
-          .select()
+          .select('id, url, estado, bloqueado, created_at')
           .single();
 
         if (insertError) {
-          console.error('[v0] Error saving analysis to Supabase:', insertError);
-          // Continuar mostrando resultados aunque falle el guardado
+          console.error('[PhishingSecureJD] Error saving analysis to Supabase:', insertError);
         } else if (insertedData) {
-          // Usar el ID real de Supabase
+          const row = insertedData as HistorialRow;
           newResult = {
-            id: insertedData.id,
-            url: insertedData.url,
-            date: dateStr,
-            risk: insertedData.risk,
-            score: insertedData.score,
-            color: insertedData.color
+            ...newResult,
+            id: row.id,
+            url: row.url,
+            estado: row.estado as EstadoAcceso,
+            bloqueado: Boolean(row.bloqueado),
+            date: formatHistorialDate(row.created_at),
           };
         }
       } catch (error) {
-        console.error('[v0] Error in handleAnalyze:', error);
-        // Continuar mostrando resultados aunque falle el guardado
+        console.error('[PhishingSecureJD] Error in handleAnalyze:', error);
       }
     }
 
@@ -456,7 +444,7 @@ function AppContent() {
           const supabase = createClient();
           const { error } = await supabase
             .from('historial_accesos')
-            .update({ is_blocked: true })
+            .update({ bloqueado: true })
             .eq('id', id);
           
           if (error) {
@@ -469,9 +457,9 @@ function AppContent() {
         }
       }
       
-      // Siempre actualizar el estado local
-      setBlockedList(prev => [itemToBlock, ...prev]);
-      setHistory(prev => prev.filter(item => item.id !== id));
+      const blockedItem: AnalysisResult = { ...itemToBlock, bloqueado: true };
+      setBlockedList((prev) => [blockedItem, ...prev]);
+      setHistory((prev) => prev.filter((item) => item.id !== id));
       // Mostrar alerta de bloqueo exitoso
       setShowBlockAlert(true);
     }
@@ -486,7 +474,7 @@ function AppContent() {
           const supabase = createClient();
           const { error } = await supabase
             .from('historial_accesos')
-            .update({ is_blocked: false })
+            .update({ bloqueado: false })
             .eq('id', id);
           
           if (error) {
@@ -499,20 +487,21 @@ function AppContent() {
         }
       }
       
-      setHistory(prev => [itemToUnblock, ...prev]);
-      setBlockedList(prev => prev.filter(item => item.id !== id));
+      const restored: AnalysisResult = { ...itemToUnblock, bloqueado: false };
+      setHistory((prev) => [restored, ...prev]);
+      setBlockedList((prev) => prev.filter((item) => item.id !== id));
     }
   };
 
   const handleClearHistory = async () => {
-    if (!user?.email || !isSupabaseConfigured) return;
-    
+    if (!isSupabaseConfigured) return;
+
     try {
       const supabase = createClient();
       const { error } = await supabase
         .from('historial_accesos')
         .delete()
-        .eq('correo_electronico', user.email);
+        .neq('id', 0);
       
       if (error) {
         console.error('[v0] Error clearing history:', error);

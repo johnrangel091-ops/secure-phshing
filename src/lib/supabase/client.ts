@@ -42,12 +42,27 @@ export function createClient(): SupabaseClient {
         }),
         signOut: async () => ({ error: null }),
       },
-      from: () => ({
-        select: () => ({ data: [], error: null }),
-        insert: () => ({ data: null, error: { message: 'Supabase no configurado' } }),
-        update: () => ({ data: null, error: { message: 'Supabase no configurado' } }),
-        delete: () => ({ data: null, error: { message: 'Supabase no configurado' } }),
-      }),
+      from: () => {
+        const emptyResult = { data: [] as unknown[], error: null }
+        const chain = {
+          order: () => Promise.resolve(emptyResult),
+          eq: () => chain,
+          neq: () => chain,
+          single: () => Promise.resolve({ data: null, error: { message: 'Supabase no configurado' } }),
+          then: (resolve: (v: typeof emptyResult) => void) => resolve(emptyResult),
+        }
+        return {
+          select: () => chain,
+          insert: () => ({
+            select: () => ({
+              single: () =>
+                Promise.resolve({ data: null, error: { message: 'Supabase no configurado' } }),
+            }),
+          }),
+          update: () => ({ eq: () => Promise.resolve({ data: null, error: { message: 'Supabase no configurado' } }) }),
+          delete: () => ({ neq: () => Promise.resolve({ data: null, error: { message: 'Supabase no configurado' } }) }),
+        }
+      },
     } as unknown as SupabaseClient
     
     supabaseInstance = mockClient

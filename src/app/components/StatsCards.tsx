@@ -5,6 +5,8 @@ interface AnalysisResult {
   id: number;
   url: string;
   date: string;
+  estado: 'Pendiente' | 'Seguro' | 'Sospechoso';
+  bloqueado: boolean;
   risk: string;
   score: number;
   color: string;
@@ -22,14 +24,16 @@ export function StatsCards({ history, blockedList }: StatsCardsProps) {
     const allAnalyzed = [...history, ...blockedList];
     const total = allAnalyzed.length;
     
-    // Contar amenazas (Alto, Critico, Medio)
-    const threats = allAnalyzed.filter(item => 
-      item.risk === 'Alto' || item.risk === 'Critico' || item.risk === 'Medio'
+    const threats = allAnalyzed.filter(
+      (item) =>
+        item.estado === 'Sospechoso' ||
+        item.risk === 'Alto' ||
+        item.risk === 'Critico' ||
+        item.risk === 'Medio'
     ).length;
-    
-    // Contar seguros (Bajo, Seguro)
-    const safe = allAnalyzed.filter(item => 
-      item.risk === 'Bajo' || item.risk === 'Seguro'
+
+    const safe = allAnalyzed.filter(
+      (item) => item.estado === 'Seguro' || item.risk === 'Bajo' || item.risk === 'Seguro'
     ).length;
     
     // Calcular efectividad: porcentaje de deteccion correcta
