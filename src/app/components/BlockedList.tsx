@@ -4,6 +4,8 @@ interface AnalysisResult {
   id: number;
   url: string;
   date: string;
+  estado: 'Pendiente' | 'Seguro' | 'Sospechoso';
+  bloqueado: boolean;
   risk: string;
   score: number;
   color: string;
@@ -49,7 +51,7 @@ export function BlockedList({ blockedList, onUnblock }: BlockedListProps) {
                         {item.url}
                       </p>
                       <p className="text-red-400/60 text-[10px] sm:text-xs mt-0.5 sm:mt-1">
-                        Bloqueado el {item.date} - Riesgo: {item.risk} ({item.score}%)
+                        Bloqueado el {item.date} — Estado: {item.estado}
                       </p>
                     </div>
                   </div>
