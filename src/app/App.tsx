@@ -7,8 +7,10 @@ import { LinkHistory } from './components/LinkHistory';
 import { SecurityTips } from './components/SecurityTips';
 import { BlockedList } from './components/BlockedList';
 import { Settings } from './components/Settings';
+import { Documentation } from './components/Documentation';
 import { AuthProvider, useAuth } from '../lib/supabase/auth-context';
 import { createClient, isSupabaseConfigured } from '../lib/supabase/client';
+import { toast, Toaster } from 'sonner';
 
 interface AnalysisResult {
   id: number;
@@ -39,13 +41,13 @@ function AppContent() {
     try {
       const supabase = createClient();
       
-      // Cargar historial del usuario actual
+      // Cargar historial del usuario actual desde historial_accesos
       const { data: historyData, error: historyError } = await supabase
-        .from('analysis_history')
+        .from('historial_accesos')
         .select('*')
-        .eq('user_email', user.email)
+        .eq('correo electrónico', user.email)
         .eq('is_blocked', false)
-        .order('created_at', { ascending: false });
+        .order('fecha_ingreso', { ascending: false });
       
       if (historyError) {
         console.error('[v0] Error loading history:', historyError);
