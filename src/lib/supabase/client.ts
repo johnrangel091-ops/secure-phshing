@@ -1,96 +1,18 @@
-import { createClient as createSupabaseClient, type SupabaseClient } from '@supabase/supabase-js'
-
-let supabaseInstance: SupabaseClient | null = null
-
-// Flag to track if we're using a real Supabase connection
-export let isSupabaseConfigured = false
-
-export function createClient(): SupabaseClient {
-  if (supabaseInstance) {
-    return supabaseInstance
-  }
-
-  const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || import.meta.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
-
-  // If environment variables are missing, return a mock client that won't crash the app
-  if (!supabaseUrl || !supabaseAnonKey) {
-    console.warn('Supabase environment variables not configured. Running in local-only mode.')
-    isSupabaseConfigured = false
-    
-    // Return a mock client that allows the UI to load with local data
-    const mockClient = {
-      auth: {
-        getSession: async () => ({ data: { session: null }, error: null }),
-        onAuthStateChange: (callback: (event: string, session: null) => void) => {
-          // Simulate auth ready state - call callback asynchronously to prevent sync issues
-          if (typeof callback === 'function') {
-            setTimeout(() => callback('SIGNED_OUT', null), 0)
-          }
-          return { data: { subscription: { unsubscribe: () => {} } } }
-        },
-        signInWithPassword: async () => ({ 
-          data: { user: null, session: null }, 
-          error: { message: 'Supabase no configurado. Ejecutando en modo local.' } 
-        }),
-        signUp: async () => ({ 
-          data: { user: null, session: null }, 
-          error: { message: 'Supabase no configurado. Ejecutando en modo local.' } 
-        }),
-        signInWithOAuth: async () => ({ 
-          error: { message: 'Supabase no configurado. Ejecutando en modo local.' } 
-        }),
-        signOut: async () => ({ error: null }),
-      },
-      from: () => {
-        const emptyResult = { data: [] as unknown[], error: null }
-        const chain = {
-          order: () => Promise.resolve(emptyResult),
-          eq: () => chain,
-          neq: () => chain,
-          single: () => Promise.resolve({ data: null, error: { message: 'Supabase no configurado' } }),
-          then: (resolve: (v: typeof emptyResult) => void) => resolve(emptyResult),
-        }
-        return {
-          select: () => chain,
-          insert: () => ({
-            select: () => ({
-              single: () =>
-                Promise.resolve({ data: null, error: { message: 'Supabase no configurado' } }),
-            }),
-          }),
-          update: (values: { bloqueado?: boolean }) => ({
-            eq: (_column: string, id: number) => ({
-              select: () => ({
-                maybeSingle: async () => ({
-                  data: {
-                    id,
-                    url: '',
-                    estado: 'Seguro',
-                    bloqueado: values.bloqueado ?? false,
-                    created_at: new Date().toISOString(),
-                  },
-                  error: null,
-                }),
-              }),
-            }),
-          }),
-          delete: () => ({ neq: () => Promise.resolve({ data: null, error: { message: 'Supabase no configurado' } }) }),
-        }
-      },
-    } as unknown as SupabaseClient
-    
-    supabaseInstance = mockClient
-    return mockClient
-  }
-
-  isSupabaseConfigured = true
-  supabaseInstance = createSupabaseClient(supabaseUrl, supabaseAnonKey, {
-    auth: {
-      persistSession: true,
-      autoRefreshToken: true,
-    },
-  })
-
-  return supabaseInstance
-}
+/**
+ * Reexporta el cliente principal definido en supabaseClient.js
+ * (credenciales, createClient e historial).
+ */
+export {
+  SUPABASE_URL,
+  SUPABASE_ANON_KEY,
+  createClient,
+  isSupabaseConfigured,
+  checkSupabaseConfigured,
+  normalizeHistorialId,
+  historialIdsMatch,
+  fetchHistorialAccesos,
+  insertHistorialAcceso,
+  setHistorialBloqueado,
+  unblockHistorialAcceso,
+  blockHistorialAcceso,
+} from './supabaseClient.js';

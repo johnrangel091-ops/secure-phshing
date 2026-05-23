@@ -11,10 +11,13 @@ import { Documentation } from './components/Documentation';
 import { AuthProvider, useAuth } from '../lib/supabase/auth-context';
 import {
   createClient,
-  isSupabaseConfigured,
+  checkSupabaseConfigured,
+  fetchHistorialAccesos,
+  insertHistorialAcceso,
   historialIdsMatch,
   normalizeHistorialId,
   unblockHistorialAcceso,
+  blockHistorialAcceso,
 } from '../lib/supabase/supabaseClient';
 import { toast, Toaster } from 'sonner';
 
@@ -127,21 +130,18 @@ function AppContent() {
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [showBlockAlert, setShowBlockAlert] = useState(false);
 
-  // Cargar historial desde Supabase (historial_accesos)
+  // Cargar historial desde Supabase (historial_accesos), mas reciente primero
   const loadHistoryFromSupabase = useCallback(async () => {
-    if (!isSupabaseConfigured) return;
+    if (!checkSupabaseConfigured()) return;
 
+    createClient();
     setIsLoadingHistory(true);
     try {
-      const supabase = createClient();
-
-      const { data, error } = await supabase
-        .from('historial_accesos')
-        .select('id, url, estado, bloqueado, created_at')
-        .order('created_at', { ascending: false });
+      const { data, error } = await fetchHistorialAccesos();
 
       if (error) {
         console.error('[PhishingSecureJD] Error loading history:', error);
+        toast.error('No se pudo cargar el historial desde Supabase');
         return;
       }
 
@@ -156,9 +156,9 @@ function AppContent() {
     }
   }, []);
 
-  // Cargar historial al montar (y cuando el usuario inicia sesion)
+  // Cargar historial al montar el panel (con sesion activa)
   useEffect(() => {
-    if (user && isSupabaseConfigured) {
+    if (user && checkSupabaseConfigured()) {
       loadHistoryFromSupabase();
     } else if (!user) {
       setHistory([]);
@@ -387,26 +387,23 @@ function AppContent() {
       color: analysis.color,
     };
 
-    if (isSupabaseConfigured) {
+    if (checkSupabaseConfigured()) {
       try {
-        const supabase = createClient();
-        const { data: insertedData, error: insertError } = await supabase
-          .from('historial_accesos')
-          .insert({
-            url: analyzedUrl,
-            estado,
-            bloqueado: false,
-          })
-          .select('id, url, estado, bloqueado, created_at')
-          .single();
+        createClient();
+        const { data: insertedData, error: insertError } = await insertHistorialAcceso({
+          url: analyzedUrl,
+          estado,
+          bloqueado: false,
+        });
 
         if (insertError) {
           console.error('[PhishingSecureJD] Error saving analysis to Supabase:', insertError);
+          toast.error('El analisis se mostro, pero no se guardo en la base de datos');
         } else if (insertedData) {
           const row = insertedData as HistorialRow;
           newResult = {
             ...newResult,
-            id: row.id,
+            id: normalizeHistorialId(row.id),
             url: row.url,
             estado: row.estado as EstadoAcceso,
             bloqueado: Boolean(row.bloqueado),
@@ -442,32 +439,24 @@ function AppContent() {
   };
 
   const handleBlockUrl = async (id: number) => {
-    const itemToBlock = history.find(item => item.id === id);
-    if (itemToBlock) {
-      // Actualizar en Supabase (si esta configurado)
-      if (isSupabaseConfigured) {
-        try {
-          const supabase = createClient();
-          const { error } = await supabase
-            .from('historial_accesos')
-            .update({ bloqueado: true })
-            .eq('id', id);
-          
-          if (error) {
-            console.error('[v0] Error blocking URL in Supabase:', error);
-            // Continuar con el bloqueo local aunque falle Supabase
-          }
-        } catch (error) {
-          console.error('[v0] Error in handleBlockUrl:', error);
-          // Continuar con el bloqueo local aunque falle Supabase
-        }
+    const recordId = normalizeHistorialId(id);
+    const itemToBlock = history.find((item) => historialIdsMatch(item.id, recordId));
+    if (!itemToBlock) return;
+
+    const blockedItem: AnalysisResult = { ...itemToBlock, id: recordId, bloqueado: true };
+
+    setHistory((prev) => prev.filter((item) => !historialIdsMatch(item.id, recordId)));
+    setBlockedList((prev) => [blockedItem, ...prev]);
+    setShowBlockAlert(true);
+
+    if (checkSupabaseConfigured()) {
+      const { error } = await blockHistorialAcceso(recordId);
+      if (error) {
+        console.error('[PhishingSecureJD] Error blocking URL:', error);
+        setBlockedList((prev) => prev.filter((item) => !historialIdsMatch(item.id, recordId)));
+        setHistory((prev) => [itemToBlock, ...prev]);
+        toast.error('No se pudo bloquear el enlace en la base de datos');
       }
-      
-      const blockedItem: AnalysisResult = { ...itemToBlock, bloqueado: true };
-      setBlockedList((prev) => [blockedItem, ...prev]);
-      setHistory((prev) => prev.filter((item) => item.id !== id));
-      // Mostrar alerta de bloqueo exitoso
-      setShowBlockAlert(true);
     }
   };
 
@@ -515,7 +504,7 @@ function AppContent() {
   };
 
   const handleClearHistory = async () => {
-    if (!isSupabaseConfigured) return;
+    if (!checkSupabaseConfigured()) return;
 
     try {
       const supabase = createClient();
