@@ -450,7 +450,7 @@ function AppContent() {
   const handleBlockUrl = async (id: number) => {
     const itemToBlock = history.find(item => item.id === id);
     if (itemToBlock) {
-      // Actualizar en Supabase
+      // Actualizar en Supabase (si esta configurado)
       if (isSupabaseConfigured) {
         try {
           const supabase = createClient();
@@ -460,15 +460,16 @@ function AppContent() {
             .eq('id', id);
           
           if (error) {
-            console.error('[v0] Error blocking URL:', error);
-            return;
+            console.error('[v0] Error blocking URL in Supabase:', error);
+            // Continuar con el bloqueo local aunque falle Supabase
           }
         } catch (error) {
           console.error('[v0] Error in handleBlockUrl:', error);
-          return;
+          // Continuar con el bloqueo local aunque falle Supabase
         }
       }
       
+      // Siempre actualizar el estado local
       setBlockedList(prev => [itemToBlock, ...prev]);
       setHistory(prev => prev.filter(item => item.id !== id));
       // Mostrar alerta de bloqueo exitoso
