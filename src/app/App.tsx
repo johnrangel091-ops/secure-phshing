@@ -12,6 +12,44 @@ import { AuthProvider, useAuth } from '../lib/supabase/auth-context';
 import { createClient, isSupabaseConfigured } from '../lib/supabase/client';
 import { toast, Toaster } from 'sonner';
 
+// Alert component for block success
+interface BlockAlertProps {
+  show: boolean;
+  onClose: () => void;
+}
+
+function BlockSuccessAlert({ show, onClose }: BlockAlertProps) {
+  if (!show) return null;
+  
+  return (
+    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+      <div 
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm"
+        onClick={onClose}
+      />
+      <div className="relative bg-gradient-to-br from-emerald-900/90 to-green-800/80 border-2 border-emerald-400/50 rounded-2xl p-6 sm:p-8 shadow-2xl shadow-emerald-500/20 animate-fadeIn max-w-sm w-full">
+        <div className="text-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-emerald-500/20 rounded-full flex items-center justify-center">
+            <svg className="w-10 h-10 text-emerald-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+          </div>
+          <h3 className="text-xl sm:text-2xl font-bold text-white mb-2">Enlace bloqueado con exito</h3>
+          <p className="text-emerald-200/80 text-sm sm:text-base mb-6">
+            El enlace malicioso ha sido agregado a tu lista de bloqueo y no podra ser accedido.
+          </p>
+          <button
+            onClick={onClose}
+            className="px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white font-semibold rounded-xl transition-all duration-300 shadow-lg shadow-emerald-500/30"
+          >
+            Entendido
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface AnalysisResult {
   id: number;
   url: string;
@@ -32,6 +70,7 @@ function AppContent() {
   const [currentResult, setCurrentResult] = useState<AnalysisResult | null>(null);
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
+  const [showBlockAlert, setShowBlockAlert] = useState(false);
 
   // Funcion para cargar historial desde Supabase filtrado por email del usuario
   const loadHistoryFromSupabase = useCallback(async () => {
@@ -41,11 +80,11 @@ function AppContent() {
     try {
       const supabase = createClient();
       
-      // Cargar historial del usuario actual desde historial_accesos
+      // Cargar historial del usuario actual desde historial_accesos (no bloqueados)
       const { data: historyData, error: historyError } = await supabase
         .from('historial_accesos')
         .select('*')
-        .eq('correo electrónico', user.email)
+        .eq('correo_electronico', user.email)
         .eq('is_blocked', false)
         .order('fecha_ingreso', { ascending: false });
       
@@ -55,14 +94,14 @@ function AppContent() {
         const formattedHistory: AnalysisResult[] = historyData.map((item: {
           id: number;
           url: string;
-          created_at: string;
+          fecha_ingreso: string;
           risk: string;
           score: number;
           color: string;
         }) => ({
           id: item.id,
           url: item.url,
-          date: new Date(item.created_at).toLocaleString('es-ES', {
+          date: new Date(item.fecha_ingreso).toLocaleString('es-ES', {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -76,13 +115,13 @@ function AppContent() {
         setHistory(formattedHistory);
       }
 
-      // Cargar lista de bloqueados del usuario actual
+      // Cargar lista de bloqueados del usuario actual desde historial_accesos
       const { data: blockedData, error: blockedError } = await supabase
-        .from('analysis_history')
+        .from('historial_accesos')
         .select('*')
-        .eq('user_email', user.email)
+        .eq('correo_electronico', user.email)
         .eq('is_blocked', true)
-        .order('created_at', { ascending: false });
+        .order('fecha_ingreso', { ascending: false });
       
       if (blockedError) {
         console.error('[v0] Error loading blocked list:', blockedError);
@@ -90,14 +129,14 @@ function AppContent() {
         const formattedBlocked: AnalysisResult[] = blockedData.map((item: {
           id: number;
           url: string;
-          created_at: string;
+          fecha_ingreso: string;
           risk: string;
           score: number;
           color: string;
         }) => ({
           id: item.id,
           url: item.url,
-          date: new Date(item.created_at).toLocaleString('es-ES', {
+          date: new Date(item.fecha_ingreso).toLocaleString('es-ES', {
             year: 'numeric',
             month: '2-digit',
             day: '2-digit',
@@ -350,15 +389,17 @@ function AppContent() {
       try {
         const supabase = createClient();
         const { data: insertedData, error: insertError } = await supabase
-          .from('analysis_history')
+          .from('historial_accesos')
           .insert({
+            identificacion: `URL-${Date.now()}`,
+            usuario_id: user.id,
+            correo_electronico: user.email,
+            fecha_ingreso: now.toISOString(),
             url: analyzedUrl,
-            user_email: user.email,
             risk: analysis.risk,
             score: analysis.score,
             color: analysis.color,
-            is_blocked: false,
-            created_at: now.toISOString()
+            is_blocked: false
           })
           .select()
           .single();
@@ -414,7 +455,7 @@ function AppContent() {
         try {
           const supabase = createClient();
           const { error } = await supabase
-            .from('analysis_history')
+            .from('historial_accesos')
             .update({ is_blocked: true })
             .eq('id', id);
           
@@ -430,6 +471,8 @@ function AppContent() {
       
       setBlockedList(prev => [itemToBlock, ...prev]);
       setHistory(prev => prev.filter(item => item.id !== id));
+      // Mostrar alerta de bloqueo exitoso
+      setShowBlockAlert(true);
     }
   };
 
@@ -441,7 +484,7 @@ function AppContent() {
         try {
           const supabase = createClient();
           const { error } = await supabase
-            .from('analysis_history')
+            .from('historial_accesos')
             .update({ is_blocked: false })
             .eq('id', id);
           
@@ -466,9 +509,9 @@ function AppContent() {
     try {
       const supabase = createClient();
       const { error } = await supabase
-        .from('analysis_history')
+        .from('historial_accesos')
         .delete()
-        .eq('user_email', user.email);
+        .eq('correo_electronico', user.email);
       
       if (error) {
         console.error('[v0] Error clearing history:', error);
@@ -543,12 +586,14 @@ function AppContent() {
               {activeSection === 'dashboard' && 'Panel Principal'}
               {activeSection === 'history' && 'Historial de Análisis'}
               {activeSection === 'threats' && 'Base de Datos de Amenazas'}
+              {activeSection === 'documentation' && 'Documentación'}
               {activeSection === 'settings' && 'Configuración'}
             </h1>
             <p className="text-gray-400">
               {activeSection === 'dashboard' && 'Monitorea y analiza URLs en tiempo real'}
               {activeSection === 'history' && 'Revisa todos los análisis realizados'}
               {activeSection === 'threats' && 'Explora amenazas conocidas y patrones de phishing'}
+              {activeSection === 'documentation' && 'Aprende como funciona la plataforma'}
               {activeSection === 'settings' && 'Personaliza tu experiencia de seguridad'}
             </p>
           </div>
@@ -972,6 +1017,10 @@ function AppContent() {
             </div>
           )}
 
+          {activeSection === 'documentation' && (
+            <Documentation />
+          )}
+
           {activeSection === 'settings' && (
             <Settings
               onClearHistory={handleClearHistory}
@@ -1052,6 +1101,12 @@ function AppContent() {
           animation: scan 2s linear infinite;
         }
       `}</style>
+
+      {/* Block Success Alert */}
+      <BlockSuccessAlert 
+        show={showBlockAlert} 
+        onClose={() => setShowBlockAlert(false)} 
+      />
     </div>
   );
 }
