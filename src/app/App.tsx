@@ -645,37 +645,37 @@ function AppContent() {
               {/* Results Dashboard */}
               {showResults && currentResult && (
                 <div className="animate-fadeIn">
-                  <h3 className="text-xl font-bold text-white mb-4">Resultados del Análisis</h3>
-                  <div className="grid md:grid-cols-3 gap-6 mb-6">
+                  <h3 className="text-lg sm:text-xl font-bold text-white mb-4">Resultados del Analisis</h3>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 mb-4 sm:mb-6">
                     {/* Risk Level Card */}
                     <div className={`bg-gradient-to-br from-gray-900/50 to-gray-800/30 border ${
                       currentResult.color === 'emerald' ? 'border-emerald-500/30' :
                       currentResult.color === 'yellow' ? 'border-yellow-500/30' :
                       'border-red-500/30'
-                    } rounded-2xl p-6 backdrop-blur-sm relative overflow-hidden group hover:border-opacity-60 transition-all duration-300`}>
-                      <div className={`absolute top-0 right-0 w-32 h-32 rounded-full blur-3xl transition-all duration-300 ${
+                    } rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm relative overflow-hidden group hover:border-opacity-60 transition-all duration-300`}>
+                      <div className={`absolute top-0 right-0 w-20 sm:w-32 h-20 sm:h-32 rounded-full blur-3xl transition-all duration-300 ${
                         currentResult.color === 'emerald' ? 'bg-emerald-500/10 group-hover:bg-emerald-500/20' :
                         currentResult.color === 'yellow' ? 'bg-yellow-500/10 group-hover:bg-yellow-500/20' :
                         'bg-red-500/10 group-hover:bg-red-500/20'
                       }`}></div>
                       <div className="relative z-10">
-                        <div className="flex items-center justify-between mb-4">
-                          <h3 className="text-gray-300 font-semibold">Nivel de Riesgo</h3>
+                        <div className="flex items-center justify-between mb-2 sm:mb-4">
+                          <h3 className="text-gray-300 text-sm sm:text-base font-semibold">Nivel de Riesgo</h3>
                           {currentResult.color === 'emerald' ? (
-                            <CheckCircle className="w-8 h-8 text-emerald-400" />
+                            <CheckCircle className="w-6 h-6 sm:w-8 sm:h-8 text-emerald-400" />
                           ) : (
-                            <AlertTriangle className={`w-8 h-8 ${currentResult.color === 'yellow' ? 'text-yellow-400' : 'text-red-400'}`} />
+                            <AlertTriangle className={`w-6 h-6 sm:w-8 sm:h-8 ${currentResult.color === 'yellow' ? 'text-yellow-400' : 'text-red-400'}`} />
                           )}
                         </div>
                         <div className="mb-2">
-                          <div className={`text-4xl font-bold mb-1 ${
+                          <div className={`text-2xl sm:text-4xl font-bold mb-1 ${
                             currentResult.color === 'emerald' ? 'text-emerald-400' :
                             currentResult.color === 'yellow' ? 'text-yellow-400' :
                             'text-red-400'
                           }`}>{currentResult.risk}</div>
-                          <div className="text-sm text-gray-500">Seguridad: {currentResult.score}%</div>
+                          <div className="text-xs sm:text-sm text-gray-500">Seguridad: {currentResult.score}%</div>
                         </div>
-                        <div className="w-full bg-gray-800 rounded-full h-2 overflow-hidden">
+                        <div className="w-full bg-gray-800 rounded-full h-1.5 sm:h-2 overflow-hidden">
                           <div className={`h-full rounded-full animate-progressBar ${
                             currentResult.color === 'emerald' ? 'bg-gradient-to-r from-emerald-500 to-emerald-400' :
                             currentResult.color === 'yellow' ? 'bg-gradient-to-r from-yellow-500 to-yellow-400' :
@@ -686,22 +686,22 @@ function AppContent() {
                     </div>
 
             {/* SSL Certificate Card */}
-            <div className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-cyan-500/30 rounded-2xl p-6 backdrop-blur-sm relative overflow-hidden group hover:border-cyan-500/60 transition-all duration-300">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-3xl group-hover:bg-cyan-500/20 transition-all duration-300"></div>
+            <div className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-cyan-500/30 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm relative overflow-hidden group hover:border-cyan-500/60 transition-all duration-300">
+              <div className="absolute top-0 right-0 w-20 sm:w-32 h-20 sm:h-32 bg-cyan-500/10 rounded-full blur-3xl group-hover:bg-cyan-500/20 transition-all duration-300"></div>
               <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-gray-300 font-semibold">Certificado SSL</h3>
-                  <Lock className="w-8 h-8 text-cyan-400" />
+                <div className="flex items-center justify-between mb-2 sm:mb-4">
+                  <h3 className="text-gray-300 text-sm sm:text-base font-semibold">Certificado SSL</h3>
+                  <Lock className="w-6 h-6 sm:w-8 sm:h-8 text-cyan-400" />
                 </div>
                 <div className="mb-2">
-                  <div className="text-4xl font-bold text-cyan-400 mb-1">Válido</div>
-                  <div className="text-sm text-gray-500">Expira: 180 días</div>
+                  <div className="text-2xl sm:text-4xl font-bold text-cyan-400 mb-1">Valido</div>
+                  <div className="text-xs sm:text-sm text-gray-500">Expira: 180 dias</div>
                 </div>
-                <div className="flex items-center gap-2 mt-4 text-sm">
-                  <div className="px-3 py-1 bg-cyan-500/20 border border-cyan-500/30 rounded-full text-cyan-300">
+                <div className="flex items-center gap-2 mt-3 sm:mt-4 text-xs sm:text-sm">
+                  <div className="px-2 sm:px-3 py-0.5 sm:py-1 bg-cyan-500/20 border border-cyan-500/30 rounded-full text-cyan-300">
                     TLS 1.3
                   </div>
-                  <div className="px-3 py-1 bg-cyan-500/20 border border-cyan-500/30 rounded-full text-cyan-300">
+                  <div className="px-2 sm:px-3 py-0.5 sm:py-1 bg-cyan-500/20 border border-cyan-500/30 rounded-full text-cyan-300">
                     SHA-256
                   </div>
                 </div>
@@ -709,20 +709,20 @@ function AppContent() {
             </div>
 
             {/* IP Reputation Card */}
-            <div className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-yellow-500/30 rounded-2xl p-6 backdrop-blur-sm relative overflow-hidden group hover:border-yellow-500/60 transition-all duration-300">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-yellow-500/10 rounded-full blur-3xl group-hover:bg-yellow-500/20 transition-all duration-300"></div>
+            <div className="bg-gradient-to-br from-gray-900/50 to-gray-800/30 border border-yellow-500/30 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm relative overflow-hidden group hover:border-yellow-500/60 transition-all duration-300">
+              <div className="absolute top-0 right-0 w-20 sm:w-32 h-20 sm:h-32 bg-yellow-500/10 rounded-full blur-3xl group-hover:bg-yellow-500/20 transition-all duration-300"></div>
               <div className="relative z-10">
-                <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-gray-300 font-semibold">Reputación de IP</h3>
-                  <Server className="w-8 h-8 text-yellow-400" />
+                <div className="flex items-center justify-between mb-2 sm:mb-4">
+                  <h3 className="text-gray-300 text-sm sm:text-base font-semibold">Reputacion de IP</h3>
+                  <Server className="w-6 h-6 sm:w-8 sm:h-8 text-yellow-400" />
                 </div>
                 <div className="mb-2">
-                  <div className="text-4xl font-bold text-yellow-400 mb-1">Neutral</div>
-                  <div className="text-sm text-gray-500">Score: 72/100</div>
+                  <div className="text-2xl sm:text-4xl font-bold text-yellow-400 mb-1">Neutral</div>
+                  <div className="text-xs sm:text-sm text-gray-500">Score: 72/100</div>
                 </div>
-                <div className="mt-4 space-y-2 text-sm">
+                <div className="mt-3 sm:mt-4 space-y-1 sm:space-y-2 text-xs sm:text-sm">
                   <div className="flex justify-between text-gray-400">
-                    <span>País:</span>
+                    <span>Pais:</span>
                     <span className="text-white">Estados Unidos</span>
                   </div>
                   <div className="flex justify-between text-gray-400">
@@ -735,91 +735,91 @@ function AppContent() {
           </div>
 
                   {/* Additional Info Cards */}
-                  <div className="grid md:grid-cols-2 gap-6">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-6">
                     {/* Motivos del Analisis - Nueva tarjeta dinamica */}
                     <div className={`bg-gradient-to-br from-gray-900/50 to-gray-800/30 border ${
                       currentResult.color === 'emerald' ? 'border-emerald-500/30' :
                       currentResult.color === 'yellow' ? 'border-yellow-500/30' :
                       'border-red-500/30'
-                    } rounded-2xl p-6 backdrop-blur-sm`}>
-                      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <Shield className={`w-5 h-5 ${
+                    } rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm`}>
+                      <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
+                        <Shield className={`w-4 h-4 sm:w-5 sm:h-5 ${
                           currentResult.color === 'emerald' ? 'text-emerald-400' :
                           currentResult.color === 'yellow' ? 'text-yellow-400' :
                           'text-red-400'
                         }`} />
                         Motivos del Analisis
                       </h3>
-                      <div className="space-y-3">
+                      <div className="space-y-2 sm:space-y-3">
                         {analysisReasons.map((reason, index) => (
-                          <div key={index} className="flex items-start gap-3">
+                          <div key={index} className="flex items-start gap-2 sm:gap-3">
                             {currentResult.color === 'emerald' ? (
-                              <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
                             ) : (
-                              <AlertTriangle className={`w-5 h-5 mt-0.5 flex-shrink-0 ${
+                              <AlertTriangle className={`w-4 h-4 sm:w-5 sm:h-5 mt-0.5 flex-shrink-0 ${
                                 currentResult.color === 'yellow' ? 'text-yellow-400' : 'text-red-400'
                               }`} />
                             )}
-                            <span className="text-gray-300">{reason}</span>
+                            <span className="text-gray-300 text-sm sm:text-base">{reason}</span>
                           </div>
                         ))}
                       </div>
-                      <div className="mt-4 pt-4 border-t border-gray-700">
-                        <p className="text-sm text-gray-500">
+                      <div className="mt-3 sm:mt-4 pt-3 sm:pt-4 border-t border-gray-700">
+                        <p className="text-xs sm:text-sm text-gray-500">
                           URL analizada: <span className="text-gray-400 break-all">{currentResult.url}</span>
                         </p>
                       </div>
                     </div>
 
-                    <div className="bg-gray-900/40 border border-gray-800 rounded-2xl p-6 backdrop-blur-sm">
-                      <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
-                        <Activity className="w-5 h-5 text-cyan-400" />
+                    <div className="bg-gray-900/40 border border-gray-800 rounded-xl sm:rounded-2xl p-4 sm:p-6 backdrop-blur-sm">
+                      <h3 className="text-base sm:text-lg font-semibold mb-3 sm:mb-4 flex items-center gap-2">
+                        <Activity className="w-4 h-4 sm:w-5 sm:h-5 text-cyan-400" />
                         Recomendaciones
                       </h3>
-                      <div className="space-y-3">
+                      <div className="space-y-2 sm:space-y-3">
                         {currentResult.color === 'emerald' ? (
                           <>
-                            <div className="flex items-start gap-3">
-                              <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300">Este sitio parece seguro para navegar</span>
+                            <div className="flex items-start gap-2 sm:gap-3">
+                              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300 text-sm sm:text-base">Este sitio parece seguro para navegar</span>
                             </div>
-                            <div className="flex items-start gap-3">
-                              <CheckCircle className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300">Verifica siempre que la URL sea la oficial</span>
+                            <div className="flex items-start gap-2 sm:gap-3">
+                              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300 text-sm sm:text-base">Verifica siempre que la URL sea la oficial</span>
                             </div>
                           </>
                         ) : currentResult.color === 'yellow' ? (
                           <>
-                            <div className="flex items-start gap-3">
-                              <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300">Procede con precaucion al navegar</span>
+                            <div className="flex items-start gap-2 sm:gap-3">
+                              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300 text-sm sm:text-base">Procede con precaucion al navegar</span>
                             </div>
-                            <div className="flex items-start gap-3">
-                              <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300">No ingreses datos personales sensibles</span>
+                            <div className="flex items-start gap-2 sm:gap-3">
+                              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300 text-sm sm:text-base">No ingreses datos personales sensibles</span>
                             </div>
-                            <div className="flex items-start gap-3">
-                              <AlertTriangle className="w-5 h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300">Verifica la autenticidad del sitio</span>
+                            <div className="flex items-start gap-2 sm:gap-3">
+                              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300 text-sm sm:text-base">Verifica la autenticidad del sitio</span>
                             </div>
                           </>
                         ) : (
                           <>
-                            <div className="flex items-start gap-3">
-                              <XCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300">NO navegues en este sitio</span>
+                            <div className="flex items-start gap-2 sm:gap-3">
+                              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300 text-sm sm:text-base">NO navegues en este sitio</span>
                             </div>
-                            <div className="flex items-start gap-3">
-                              <XCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300">No ingreses ninguna informacion personal</span>
+                            <div className="flex items-start gap-2 sm:gap-3">
+                              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300 text-sm sm:text-base">No ingreses ninguna informacion personal</span>
                             </div>
-                            <div className="flex items-start gap-3">
-                              <XCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300">Reporta este sitio como sospechoso</span>
+                            <div className="flex items-start gap-2 sm:gap-3">
+                              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300 text-sm sm:text-base">Reporta este sitio como sospechoso</span>
                             </div>
-                            <div className="flex items-start gap-3">
-                              <XCircle className="w-5 h-5 text-red-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300">Considera bloquear esta URL</span>
+                            <div className="flex items-start gap-2 sm:gap-3">
+                              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400 mt-0.5 flex-shrink-0" />
+                              <span className="text-gray-300 text-sm sm:text-base">Considera bloquear esta URL</span>
                             </div>
                           </>
                         )}
