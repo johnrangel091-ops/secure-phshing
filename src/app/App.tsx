@@ -9,7 +9,13 @@ import { BlockedList } from './components/BlockedList';
 import { Settings } from './components/Settings';
 import { Documentation } from './components/Documentation';
 import { AuthProvider, useAuth } from '../lib/supabase/auth-context';
-import { createClient, isSupabaseConfigured } from '../lib/supabase/supabaseClient';
+import {
+  createClient,
+  isSupabaseConfigured,
+  historialIdsMatch,
+  normalizeHistorialId,
+  unblockHistorialAcceso,
+} from '../lib/supabase/supabaseClient';
 import { toast, Toaster } from 'sonner';
 
 // Alert component for block success
@@ -97,7 +103,7 @@ function rowToAnalysisResult(item: HistorialRow): AnalysisResult {
     estado === 'Seguro' ? 'emerald' : estado === 'Sospechoso' ? 'red' : 'yellow';
 
   return {
-    id: item.id,
+    id: normalizeHistorialId(item.id),
     url: item.url,
     date: formatHistorialDate(item.created_at),
     estado,
@@ -466,30 +472,45 @@ function AppContent() {
   };
 
   const handleUnblockUrl = async (id: number) => {
-    const itemToUnblock = blockedList.find(item => item.id === id);
-    if (itemToUnblock) {
-      // Actualizar en Supabase
-      if (isSupabaseConfigured) {
-        try {
-          const supabase = createClient();
-          const { error } = await supabase
-            .from('historial_accesos')
-            .update({ bloqueado: false })
-            .eq('id', id);
-          
-          if (error) {
-            console.error('[v0] Error unblocking URL:', error);
-            return;
-          }
-        } catch (error) {
-          console.error('[v0] Error in handleUnblockUrl:', error);
-          return;
-        }
-      }
-      
-      const restored: AnalysisResult = { ...itemToUnblock, bloqueado: false };
-      setHistory((prev) => [restored, ...prev]);
-      setBlockedList((prev) => prev.filter((item) => item.id !== id));
+    const recordId = normalizeHistorialId(id);
+    const itemToUnblock = blockedList.find((item) =>
+      historialIdsMatch(item.id, recordId)
+    );
+    if (!itemToUnblock) return;
+
+    const restored: AnalysisResult = {
+      ...itemToUnblock,
+      id: recordId,
+      bloqueado: false,
+    };
+
+    // Actualizar UI al instante (optimista)
+    setBlockedList((prev) =>
+      prev.filter((item) => !historialIdsMatch(item.id, recordId))
+    );
+    setHistory((prev) => [restored, ...prev]);
+
+    const { data, error } = await unblockHistorialAcceso(recordId);
+
+    if (error) {
+      console.error('[PhishingSecureJD] Error unblocking URL:', error);
+      // Revertir si Supabase fallo
+      setHistory((prev) =>
+        prev.filter((item) => !historialIdsMatch(item.id, recordId))
+      );
+      setBlockedList((prev) => [itemToUnblock, ...prev]);
+      toast.error('No se pudo desbloquear el enlace. Intenta de nuevo.');
+      return;
+    }
+
+    if (data) {
+      setHistory((prev) =>
+        prev.map((item) =>
+          historialIdsMatch(item.id, recordId)
+            ? { ...item, ...rowToAnalysisResult(data as HistorialRow) }
+            : item
+        )
+      );
     }
   };
 

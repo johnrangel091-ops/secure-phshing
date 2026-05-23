@@ -59,7 +59,22 @@ export function createClient(): SupabaseClient {
                 Promise.resolve({ data: null, error: { message: 'Supabase no configurado' } }),
             }),
           }),
-          update: () => ({ eq: () => Promise.resolve({ data: null, error: { message: 'Supabase no configurado' } }) }),
+          update: (values: { bloqueado?: boolean }) => ({
+            eq: (_column: string, id: number) => ({
+              select: () => ({
+                maybeSingle: async () => ({
+                  data: {
+                    id,
+                    url: '',
+                    estado: 'Seguro',
+                    bloqueado: values.bloqueado ?? false,
+                    created_at: new Date().toISOString(),
+                  },
+                  error: null,
+                }),
+              }),
+            }),
+          }),
           delete: () => ({ neq: () => Promise.resolve({ data: null, error: { message: 'Supabase no configurado' } }) }),
         }
       },
