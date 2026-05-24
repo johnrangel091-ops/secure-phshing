@@ -9,7 +9,7 @@ import { BlockedList } from './components/BlockedList';
 import { Settings } from './components/Settings';
 import { Documentation } from './components/Documentation';
 import { AuthProvider, useAuth } from '../lib/supabase/auth-context';
-import { createClient } from '../lib/supabase/supabaseClient';
+import { createClient, isSupabaseConfigured } from '../lib/supabase/supabaseClient';
 import { toast, Toaster } from 'sonner';
 
 // Alert component for block success
@@ -1139,8 +1139,37 @@ function AppContent() {
   );
 }
 
+function SupabaseSetupRequired() {
+  return (
+    <div className="min-h-screen bg-slate-950 flex items-center justify-center p-6">
+      <div className="max-w-lg w-full rounded-2xl border border-amber-500/40 bg-slate-900/90 p-8 text-center shadow-xl">
+        <AlertTriangle className="w-12 h-12 text-amber-400 mx-auto mb-4" />
+        <h1 className="text-xl font-bold text-white mb-2">Falta configurar Supabase</h1>
+        <p className="text-slate-400 text-sm mb-4 leading-relaxed">
+          La aplicacion no puede iniciar sin las variables de entorno. En local, crea un archivo{' '}
+          <code className="text-cyan-300">.env</code> copiando <code className="text-cyan-300">.env.example</code>.
+          En Vercel, agrega las variables en Settings → Environment Variables y vuelve a desplegar.
+        </p>
+        <ul className="text-left text-sm text-slate-300 space-y-1 mb-4 bg-slate-950/60 rounded-lg p-4 border border-slate-800">
+          <li>
+            <code className="text-emerald-400">VITE_SUPABASE_URL</code>
+          </li>
+          <li>
+            <code className="text-emerald-400">VITE_SUPABASE_ANON_KEY</code>
+          </li>
+        </ul>
+        <p className="text-slate-500 text-xs">Despues de guardar, reinicia <code className="text-slate-400">pnpm dev</code> o redeploy en Vercel.</p>
+      </div>
+    </div>
+  );
+}
+
 // Wrap the app with AuthProvider
 export default function App() {
+  if (!isSupabaseConfigured()) {
+    return <SupabaseSetupRequired />;
+  }
+
   return (
     <AuthProvider>
       <AppContent />
