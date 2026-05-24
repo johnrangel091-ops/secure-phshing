@@ -9,7 +9,7 @@ import { BlockedList } from './components/BlockedList';
 import { Settings } from './components/Settings';
 import { Documentation } from './components/Documentation';
 import { AuthProvider, useAuth } from '../lib/supabase/auth-context';
-import { createClient, isSupabaseConfigured } from '../lib/supabase/supabaseClient';
+import { createClient } from '../lib/supabase/supabaseClient';
 import { toast, Toaster } from 'sonner';
 
 // Alert component for block success
@@ -80,6 +80,11 @@ function formatHistorialDate(isoDate: string): string {
   });
 }
 
+/** Supabase puede devolver `id` como string; normaliza para comparar y filtrar. */
+function toHistorialId(id: number | string): number {
+  return typeof id === 'string' ? parseInt(id, 10) : id;
+}
+
 interface HistorialRow {
   id: number;
   url: string;
@@ -97,7 +102,7 @@ function rowToAnalysisResult(item: HistorialRow): AnalysisResult {
     estado === 'Seguro' ? 'emerald' : estado === 'Sospechoso' ? 'red' : 'yellow';
 
   return {
-    id: item.id,
+    id: toHistorialId(item.id),
     url: item.url,
     date: formatHistorialDate(item.created_at),
     estado,
@@ -120,11 +125,10 @@ function AppContent() {
   const [isDarkMode, setIsDarkMode] = useState(true);
   const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const [showBlockAlert, setShowBlockAlert] = useState(false);
+  const [unblockingId, setUnblockingId] = useState<number | null>(null);
 
   // Cargar historial desde Supabase (historial_accesos)
   const loadHistoryFromSupabase = useCallback(async () => {
-    if (!isSupabaseConfigured) return;
-
     setIsLoadingHistory(true);
     try {
       const supabase = createClient();
@@ -152,9 +156,9 @@ function AppContent() {
 
   // Cargar historial al montar (y cuando el usuario inicia sesion)
   useEffect(() => {
-    if (user && isSupabaseConfigured) {
+    if (user) {
       loadHistoryFromSupabase();
-    } else if (!user) {
+    } else {
       setHistory([]);
       setBlockedList([]);
     }
@@ -381,38 +385,40 @@ function AppContent() {
       color: analysis.color,
     };
 
-    if (isSupabaseConfigured) {
-      try {
-        const supabase = createClient();
-        const { data: insertedData, error: insertError } = await supabase
-          .from('historial_accesos')
-          .insert({
-            url: analyzedUrl,
-            estado,
-            bloqueado: false,
-          })
-          .select('id, url, estado, bloqueado, created_at')
-          .single();
+    try {
+      const supabase = createClient();
+      const { data: insertedData, error: insertError } = await supabase
+        .from('historial_accesos')
+        .insert({
+          url: analyzedUrl,
+          estado,
+          bloqueado: false,
+          correo_electronico: user.email,
+          usuario_id: user.id,
+        })
+        .select('id, url, estado, bloqueado, created_at')
+        .single();
 
-        if (insertError) {
-          console.error('[PhishingSecureJD] Error saving analysis to Supabase:', insertError);
-        } else if (insertedData) {
-          const row = insertedData as HistorialRow;
+      if (insertError) {
+        console.error('[PhishingSecureJD] Error saving analysis to Supabase:', insertError);
+        toast.error('No se pudo guardar el analisis en la base de datos.');
+      } else if (insertedData) {
+        const row = insertedData as HistorialRow;
           newResult = {
             ...newResult,
-            id: row.id,
+            id: toHistorialId(row.id),
             url: row.url,
-            estado: row.estado as EstadoAcceso,
-            bloqueado: Boolean(row.bloqueado),
-            date: formatHistorialDate(row.created_at),
-          };
-        }
-      } catch (error) {
-        console.error('[PhishingSecureJD] Error in handleAnalyze:', error);
+          estado: row.estado as EstadoAcceso,
+          bloqueado: Boolean(row.bloqueado),
+          date: formatHistorialDate(row.created_at),
+        };
       }
+    } catch (error) {
+      console.error('[PhishingSecureJD] Error in handleAnalyze:', error);
+      toast.error('Error de conexion con Supabase.');
     }
 
-    // SIEMPRE mostrar los resultados del analisis, independientemente de Supabase
+    // Mostrar resultados del analisis
     setCurrentResult(newResult);
     setAnalysisReasons(analysis.reasons);
     setHistory(prev => [newResult, ...prev]);
@@ -436,82 +442,110 @@ function AppContent() {
   };
 
   const handleBlockUrl = async (id: number) => {
-    const itemToBlock = history.find(item => item.id === id);
-    if (itemToBlock) {
-      // Actualizar en Supabase (si esta configurado)
-      if (isSupabaseConfigured) {
-        try {
-          const supabase = createClient();
-          const { error } = await supabase
-            .from('historial_accesos')
-            .update({ bloqueado: true })
-            .eq('id', id);
-          
-          if (error) {
-            console.error('[v0] Error blocking URL in Supabase:', error);
-            // Continuar con el bloqueo local aunque falle Supabase
-          }
-        } catch (error) {
-          console.error('[v0] Error in handleBlockUrl:', error);
-          // Continuar con el bloqueo local aunque falle Supabase
-        }
+    const recordId = toHistorialId(id);
+    const itemToBlock = history.find((item) => toHistorialId(item.id) === recordId);
+    if (!itemToBlock || !user?.id) return;
+
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('historial_accesos')
+        .update({ bloqueado: true })
+        .eq('id', recordId)
+        .eq('usuario_id', user.id)
+        .select('id, url, estado, bloqueado, created_at')
+        .maybeSingle();
+
+      if (error) {
+        console.error('[PhishingSecureJD] Error blocking URL in Supabase:', error);
+        toast.error('No se pudo bloquear el enlace en la base de datos.');
+        return;
       }
-      
-      const blockedItem: AnalysisResult = { ...itemToBlock, bloqueado: true };
-      setBlockedList((prev) => [blockedItem, ...prev]);
-      setHistory((prev) => prev.filter((item) => item.id !== id));
-      // Mostrar alerta de bloqueo exitoso
+
+      if (!data) {
+        toast.error('No se encontro el registro para bloquear.');
+        return;
+      }
+
+      const blockedItem = rowToAnalysisResult(data as HistorialRow);
+      setBlockedList((prev) => [
+        blockedItem,
+        ...prev.filter((item) => toHistorialId(item.id) !== recordId),
+      ]);
+      setHistory((prev) => prev.filter((item) => toHistorialId(item.id) !== recordId));
       setShowBlockAlert(true);
+    } catch (error) {
+      console.error('[PhishingSecureJD] Error in handleBlockUrl:', error);
+      toast.error('Error de conexion con Supabase.');
     }
   };
 
   const handleUnblockUrl = async (id: number) => {
-    const itemToUnblock = blockedList.find(item => item.id === id);
-    if (itemToUnblock) {
-      // Actualizar en Supabase
-      if (isSupabaseConfigured) {
-        try {
-          const supabase = createClient();
-          const { error } = await supabase
-            .from('historial_accesos')
-            .update({ bloqueado: false })
-            .eq('id', id);
-          
-          if (error) {
-            console.error('[v0] Error unblocking URL:', error);
-            return;
-          }
-        } catch (error) {
-          console.error('[v0] Error in handleUnblockUrl:', error);
-          return;
-        }
+    const recordId = toHistorialId(id);
+    const itemToUnblock = blockedList.find((item) => toHistorialId(item.id) === recordId);
+    if (!itemToUnblock || !user?.id) {
+      toast.error('Debes iniciar sesion para desbloquear enlaces.');
+      return;
+    }
+
+    setUnblockingId(recordId);
+    try {
+      const supabase = createClient();
+      const { data, error } = await supabase
+        .from('historial_accesos')
+        .update({ bloqueado: false })
+        .eq('id', recordId)
+        .eq('usuario_id', user.id)
+        .select('id, url, estado, bloqueado, created_at')
+        .maybeSingle();
+
+      if (error) {
+        console.error('[PhishingSecureJD] Error unblocking URL:', error);
+        toast.error('No se pudo desbloquear el enlace.');
+        return;
       }
-      
-      const restored: AnalysisResult = { ...itemToUnblock, bloqueado: false };
-      setHistory((prev) => [restored, ...prev]);
-      setBlockedList((prev) => prev.filter((item) => item.id !== id));
+
+      if (!data) {
+        toast.error('No se encontro el registro. Recarga la pagina e intenta de nuevo.');
+        return;
+      }
+
+      const restored = rowToAnalysisResult(data as HistorialRow);
+      setHistory((prev) => [
+        restored,
+        ...prev.filter((item) => toHistorialId(item.id) !== recordId),
+      ]);
+      setBlockedList((prev) => prev.filter((item) => toHistorialId(item.id) !== recordId));
+      toast.success('Enlace desbloqueado. Vuelve a aparecer en tu historial.');
+    } catch (error) {
+      console.error('[PhishingSecureJD] Error in handleUnblockUrl:', error);
+      toast.error('Error de conexion con Supabase.');
+    } finally {
+      setUnblockingId(null);
     }
   };
 
   const handleClearHistory = async () => {
-    if (!isSupabaseConfigured) return;
+    if (!user?.id) return;
 
     try {
       const supabase = createClient();
       const { error } = await supabase
         .from('historial_accesos')
         .delete()
-        .neq('id', 0);
-      
+        .eq('usuario_id', user.id);
+
       if (error) {
-        console.error('[v0] Error clearing history:', error);
+        console.error('[PhishingSecureJD] Error clearing history:', error);
+        toast.error('No se pudo borrar el historial.');
         return;
       }
-      
+
       setHistory([]);
       setBlockedList([]);
     } catch (error) {
-      console.error('[v0] Error in handleClearHistory:', error);
+      console.error('[PhishingSecureJD] Error in handleClearHistory:', error);
+      toast.error('Error de conexion con Supabase.');
     }
   };
 
@@ -880,6 +914,7 @@ function AppContent() {
                 <BlockedList
                   blockedList={blockedList}
                   onUnblock={handleUnblockUrl}
+                  unblockingId={unblockingId}
                 />
               </div>
             </>
@@ -894,6 +929,7 @@ function AppContent() {
               <BlockedList
                 blockedList={blockedList}
                 onUnblock={handleUnblockUrl}
+                unblockingId={unblockingId}
               />
             </div>
           )}
@@ -966,11 +1002,13 @@ function AppContent() {
                               <td className="px-6 py-4">
                                 <div className="flex items-center justify-center">
                                   <button
+                                    type="button"
                                     onClick={() => handleUnblockUrl(item.id)}
-                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-400 text-sm font-medium transition-all duration-300"
+                                    disabled={unblockingId === toHistorialId(item.id)}
+                                    className="inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-400 text-sm font-medium transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
                                     <CheckCircle className="w-4 h-4" />
-                                    Desbloquear
+                                    {unblockingId === toHistorialId(item.id) ? 'Desbloqueando...' : 'Desbloquear'}
                                   </button>
                                 </div>
                               </td>

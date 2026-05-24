@@ -13,10 +13,15 @@ interface AnalysisResult {
 
 interface BlockedListProps {
   blockedList: AnalysisResult[];
-  onUnblock: (id: number) => void;
+  onUnblock: (id: number) => void | Promise<void>;
+  unblockingId?: number | null;
 }
 
-export function BlockedList({ blockedList, onUnblock }: BlockedListProps) {
+function toHistorialId(id: number | string): number {
+  return typeof id === 'string' ? parseInt(id, 10) : id;
+}
+
+export function BlockedList({ blockedList, onUnblock, unblockingId = null }: BlockedListProps) {
   return (
     <div className="bg-gradient-to-br from-red-950/30 to-red-900/20 border border-red-500/30 rounded-2xl backdrop-blur-xl overflow-hidden">
       {/* Header */}
@@ -38,33 +43,40 @@ export function BlockedList({ blockedList, onUnblock }: BlockedListProps) {
       ) : (
         <div className="p-3 sm:p-6">
           <div className="space-y-2 sm:space-y-3">
-            {blockedList.map((item) => (
-              <div
-                key={item.id}
-                className="bg-red-950/30 border border-red-500/30 rounded-xl p-3 sm:p-4 hover:bg-red-950/40 hover:border-red-500/50 transition-all duration-300 group"
-              >
-                <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
-                  <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
-                    <Ban className="w-4 h-4 sm:w-5 sm:h-5 text-red-400 flex-shrink-0" />
-                    <div className="flex-1 min-w-0">
-                      <p className="text-white text-sm sm:text-base font-medium truncate group-hover:text-red-200 transition-colors">
-                        {item.url}
-                      </p>
-                      <p className="text-red-400/60 text-[10px] sm:text-xs mt-0.5 sm:mt-1">
-                        Bloqueado el {item.date} — Estado: {item.estado}
-                      </p>
+            {blockedList.map((item) => {
+              const recordId = toHistorialId(item.id);
+              const isUnblocking = unblockingId === recordId;
+
+              return (
+                <div
+                  key={recordId}
+                  className="bg-red-950/30 border border-red-500/30 rounded-xl p-3 sm:p-4 hover:bg-red-950/40 hover:border-red-500/50 transition-all duration-300 group"
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3">
+                    <div className="flex items-center gap-2 sm:gap-3 flex-1 min-w-0">
+                      <Ban className="w-4 h-4 sm:w-5 sm:h-5 text-red-400 flex-shrink-0" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-sm sm:text-base font-medium truncate group-hover:text-red-200 transition-colors">
+                          {item.url}
+                        </p>
+                        <p className="text-red-400/60 text-[10px] sm:text-xs mt-0.5 sm:mt-1">
+                          Bloqueado el {item.date} — Estado: {item.estado}
+                        </p>
+                      </div>
                     </div>
+                    <button
+                      type="button"
+                      disabled={isUnblocking}
+                      onClick={() => onUnblock(recordId)}
+                      className="self-end sm:self-auto inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-400 text-xs sm:text-sm font-medium transition-all duration-300 flex-shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                    >
+                      <Unlock className="w-3 h-3 sm:w-4 sm:h-4" />
+                      {isUnblocking ? 'Desbloqueando...' : 'Desbloquear'}
+                    </button>
                   </div>
-                  <button
-                    onClick={() => onUnblock(item.id)}
-                    className="self-end sm:self-auto inline-flex items-center gap-1 px-3 py-1.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg text-emerald-400 text-xs sm:text-sm font-medium transition-all duration-300 flex-shrink-0"
-                  >
-                    <Unlock className="w-3 h-3 sm:w-4 sm:h-4" />
-                    Desbloquear
-                  </button>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
       )}
