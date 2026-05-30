@@ -94,31 +94,33 @@ export function LoginForm() {
 
     try {
       const supabase = createClient();
-      const redirectUrl = typeof window !== 'undefined'
-        ? window.location.origin
-        : '';
+      const redirectUrl =
+        import.meta.env.VITE_DEV_SUPABASE_REDIRECT_URL ||
+        (typeof window !== 'undefined' ? window.location.origin : '');
 
       const { error } = await supabase.auth.resetPasswordForEmail(resetEmail, {
         redirectTo: redirectUrl,
       });
 
       if (error) {
-        setResetMessage({ 
-          type: 'error', 
-          text: error.message || 'Error al enviar el enlace de recuperacion. Intenta nuevamente.' 
+        console.error('[PhishingSecureJD] resetPasswordForEmail error:', error);
+        setResetMessage({
+          type: 'error',
+          text: error.message || 'Error al enviar el enlace de recuperacion. Intenta nuevamente.',
         });
       } else {
-        setResetMessage({ 
-          type: 'success', 
-          text: 'Enlace de recuperacion enviado. Revisa tu bandeja de entrada y carpeta de spam.' 
+        setResetMessage({
+          type: 'success',
+          text: 'Enlace enviado. Revisa tu bandeja de entrada y la carpeta de spam.',
         });
         setResetEmail('');
         setResetEmailValid(null);
       }
     } catch (err) {
-      setResetMessage({ 
-        type: 'error', 
-        text: 'Ocurrio un error inesperado. Intenta nuevamente.' 
+      console.error('[PhishingSecureJD] handleForgotPassword unexpected error:', err);
+      setResetMessage({
+        type: 'error',
+        text: 'Ocurrio un error inesperado. Intenta nuevamente.',
       });
     } finally {
       setIsResetting(false);

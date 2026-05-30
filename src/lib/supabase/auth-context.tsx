@@ -106,7 +106,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const updatePassword = async (newPassword: string) => {
     const supabase = createClient()
     const { error } = await supabase.auth.updateUser({ password: newPassword })
-    if (!error) {
+    if (error) {
+      console.error('[PhishingSecureJD] supabase.auth.updateUser error:', error)
+    } else {
       setIsPasswordRecovery(false)
     }
     return { error: error as Error | null }
