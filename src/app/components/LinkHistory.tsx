@@ -10,7 +10,10 @@ import {
   Unlock,
   FileDown,
 } from 'lucide-react';
-import { jsPDF } from 'jspdf';
+import {
+  generateExecutivePdfReport,
+  getDynamicAccessStatus,
+} from '../../lib/analysis';
 
 type EstadoAcceso = 'Pendiente' | 'Seguro' | 'Sospechoso';
 
@@ -42,65 +45,28 @@ function estadoBadgeClasses(estado: EstadoAcceso): string {
   }
 }
 
-function accesoLabel(bloqueado: boolean): { text: string; classes: string } {
-  if (bloqueado) {
-    return {
-      text: 'Bloqueado',
-      classes: 'bg-red-500/15 text-red-400 border-red-500/30',
-    };
-  }
+function accesoLabel(item: AnalysisResult): { text: string; classes: string } {
+  const access = getDynamicAccessStatus(item);
   return {
-    text: 'Permitido',
-    classes: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+    text: access.shortText,
+    classes: access.badgeClasses,
   };
 }
 
 export function LinkHistory({ history, onBlock, isLoading = false }: LinkHistoryProps) {
   const [selectedItem, setSelectedItem] = useState<AnalysisResult | null>(null);
 
-  const handleExportPDF = (item: AnalysisResult) => {
+  const handleExportPDF = async (item: AnalysisResult) => {
     try {
-      const doc = new jsPDF();
-      doc.setFillColor(15, 23, 42);
-      doc.rect(0, 0, 210, 40, 'F');
-      doc.setTextColor(255, 255, 255);
-      doc.setFontSize(22);
-      doc.setFont('helvetica', 'bold');
-      doc.text('PhishingSecureJD', 20, 25);
-      doc.setFontSize(10);
-      doc.setFont('helvetica', 'normal');
-      doc.text('Reporte de Analisis de Seguridad', 20, 35);
-
-      doc.setTextColor(50, 50, 50);
-      doc.setFontSize(12);
-      let yPos = 60;
-
-      doc.setFont('helvetica', 'bold');
-      doc.text('Fecha:', 20, yPos);
-      doc.setFont('helvetica', 'normal');
-      doc.text(item.date, 55, yPos);
-      yPos += 14;
-
-      doc.setFont('helvetica', 'bold');
-      doc.text('URL:', 20, yPos);
-      yPos += 8;
-      doc.setFontSize(10);
-      doc.text(doc.splitTextToSize(item.url, 170), 20, yPos);
-      yPos += 20;
-
-      doc.setFontSize(12);
-      doc.setFont('helvetica', 'bold');
-      doc.text('Estado:', 20, yPos);
-      doc.setFont('helvetica', 'normal');
-      doc.text(item.estado, 55, yPos);
-      yPos += 14;
-
-      doc.setFont('helvetica', 'bold');
-      doc.text('Acceso:', 20, yPos);
-      doc.setFont('helvetica', 'normal');
-      doc.text(item.bloqueado ? 'Bloqueado' : 'Permitido', 55, yPos);
-
-      doc.save(`PhishingSecureJD_Reporte_${item.id}.pdf`);
+      await generateExecutivePdfReport({
+        id: item.id,
+        url: item.url,
+        date: item.date,
+        estado: item.estado,
+        risk: item.risk,
+        score: item.score,
+        bloqueado: item.bloqueado,
+      });
     } catch (error) {
       console.error('Error generating PDF:', error);
     }
@@ -138,7 +104,8 @@ export function LinkHistory({ history, onBlock, isLoading = false }: LinkHistory
             {/* Mobile: tarjetas apiladas */}
             <div className="md:hidden p-3 space-y-3">
               {history.map((item) => {
-                const acceso = accesoLabel(item.bloqueado);
+                const acceso = accesoLabel(item);
+                const accessStatus = getDynamicAccessStatus(item);
                 return (
                   <article
                     key={item.id}
@@ -165,10 +132,10 @@ export function LinkHistory({ history, onBlock, isLoading = false }: LinkHistory
                       <span
                         className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${acceso.classes}`}
                       >
-                        {item.bloqueado ? (
-                          <Lock className="w-3 h-3" />
-                        ) : (
+                        {accessStatus.permitted ? (
                           <Unlock className="w-3 h-3" />
+                        ) : (
+                          <Lock className="w-3 h-3" />
                         )}
                         {acceso.text}
                       </span>
@@ -229,7 +196,8 @@ export function LinkHistory({ history, onBlock, isLoading = false }: LinkHistory
                 </thead>
                 <tbody className="divide-y divide-slate-800/80">
                   {history.map((item) => {
-                    const acceso = accesoLabel(item.bloqueado);
+                    const acceso = accesoLabel(item);
+                const accessStatus = getDynamicAccessStatus(item);
                     return (
                       <tr
                         key={item.id}
@@ -257,10 +225,10 @@ export function LinkHistory({ history, onBlock, isLoading = false }: LinkHistory
                           <span
                             className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${acceso.classes}`}
                           >
-                            {item.bloqueado ? (
-                              <Lock className="w-3.5 h-3.5" />
-                            ) : (
+                            {accessStatus.permitted ? (
                               <Unlock className="w-3.5 h-3.5" />
+                            ) : (
+                              <Lock className="w-3.5 h-3.5" />
                             )}
                             {acceso.text}
                           </span>
@@ -343,9 +311,9 @@ export function LinkHistory({ history, onBlock, isLoading = false }: LinkHistory
                   {selectedItem.estado}
                 </span>
                 <span
-                  className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold border ${accesoLabel(selectedItem.bloqueado).classes}`}
+                  className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold border ${accesoLabel(selectedItem).classes}`}
                 >
-                  {accesoLabel(selectedItem.bloqueado).text}
+                  {accesoLabel(selectedItem).text}
                 </span>
               </div>
               <p className="text-slate-500 text-xs">
