@@ -26,16 +26,23 @@ export function UpdatePasswordForm() {
     try {
       const { error } = await updatePassword(password);
       if (error) {
-        setMessage({ type: 'error', text: error.message || 'Error al actualizar la contraseña. Intenta nuevamente.' });
+        console.error('[PhishingSecureJD] updatePassword error:', error);
+        setMessage({
+          type: 'error',
+          text: error.message.includes('expired')
+            ? 'El enlace de recuperacion ha expirado. Solicita uno nuevo.'
+            : error.message || 'Error al actualizar la contraseña. Intenta nuevamente.',
+        });
       } else {
         setMessage({
           type: 'success',
-          text: '¡Contraseña actualizada correctamente! Redirigiendo al inicio de sesión...',
+          text: '¡Contraseña actualizada con exito! Redirigiendo al inicio de sesion...',
         });
-        setTimeout(() => signOut(), 2000);
+        setTimeout(() => signOut(), 2500);
       }
-    } catch {
-      setMessage({ type: 'error', text: 'Ocurrió un error inesperado. Intenta nuevamente.' });
+    } catch (err) {
+      console.error('[PhishingSecureJD] UpdatePasswordForm unexpected error:', err);
+      setMessage({ type: 'error', text: 'Ocurrio un error inesperado. Intenta nuevamente.' });
     } finally {
       setIsLoading(false);
     }
