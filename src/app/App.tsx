@@ -1,5 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { Shield, Lock, AlertTriangle, CheckCircle, XCircle, Activity, Globe, Server, Database, Settings as SettingsIcon, LogOut } from 'lucide-react';
+import { Shield, Lock, Unlock, AlertTriangle, CheckCircle, XCircle, Activity, Globe, Server, Database, Settings as SettingsIcon, LogOut } from 'lucide-react';
+import {
+  analyzeUrlForPhishing,
+  getDynamicAccessStatus,
+  getSecurityRecommendations,
+} from '../lib/analysis';
 import { Sidebar } from './components/Sidebar';
 import { LoginForm } from './components/LoginForm';
 import { StatsCards } from './components/StatsCards';
@@ -8,6 +13,7 @@ import { SecurityTips } from './components/SecurityTips';
 import { BlockedList } from './components/BlockedList';
 import { Settings } from './components/Settings';
 import { Documentation } from './components/Documentation';
+import { AppPageHeader } from './components/AppPageHeader';
 import { AuthProvider, useAuth } from '../lib/supabase/auth-context';
 import { createClient, isSupabaseConfigured } from '../lib/supabase/supabaseClient';
 import { toast, Toaster } from 'sonner';
@@ -171,181 +177,6 @@ function AppContent() {
       setIsDarkMode(savedDarkMode === 'true');
     }
   }, []);
-
-  // Lista de dominios seguros conocidos
-  const safeDomains = [
-    'google.com', 'facebook.com', 'twitter.com', 'instagram.com', 'linkedin.com',
-    'youtube.com', 'amazon.com', 'microsoft.com', 'apple.com', 'netflix.com',
-    'github.com', 'stackoverflow.com', 'reddit.com', 'wikipedia.org', 'yahoo.com',
-    'outlook.com', 'live.com', 'office.com', 'dropbox.com', 'spotify.com',
-    'twitch.tv', 'paypal.com', 'ebay.com', 'walmart.com', 'target.com',
-    'bestbuy.com', 'adobe.com', 'salesforce.com', 'zoom.us', 'slack.com',
-    'vercel.com', 'notion.so', 'figma.com', 'canva.com', 'trello.com'
-  ];
-
-  // Palabras clave sospechosas comunes en phishing
-  const suspiciousKeywords = [
-    'login', 'signin', 'sign-in', 'account', 'verify', 'verification', 'update',
-    'secure', 'security', 'bank', 'banco', 'banking', 'password', 'credential',
-    'suspend', 'suspended', 'locked', 'unlock', 'confirm', 'confirmation',
-    'urgent', 'alert', 'warning', 'winner', 'prize', 'reward', 'free', 'gift',
-    'click', 'support', 'soporte', 'help', 'helpdesk', 'service', 'customer',
-    'wallet', 'crypto', 'bitcoin', 'payment', 'pago', 'invoice', 'factura',
-    'actualizar', 'verificar', 'seguridad', 'contraseña', 'cuenta'
-  ];
-
-  // Extensiones de dominio sospechosas
-  const suspiciousExtensions = [
-    '.xyz', '.top', '.club', '.info', '.online', '.site', '.website', '.tk',
-    '.ml', '.ga', '.cf', '.gq', '.pw', '.cc', '.ws', '.buzz', '.work'
-  ];
-
-  // Funcion para analizar la URL y detectar phishing
-  const analyzeUrlForPhishing = (inputUrl: string): { score: number; risk: string; color: string; reasons: string[] } => {
-    const reasons: string[] = [];
-    let dangerScore = 0;
-
-    // Normalizar URL
-    let normalizedUrl = inputUrl.toLowerCase().trim();
-    if (!normalizedUrl.startsWith('http://') && !normalizedUrl.startsWith('https://')) {
-      normalizedUrl = 'https://' + normalizedUrl;
-    }
-
-    let hostname = '';
-    let pathname = '';
-    try {
-      const urlObj = new URL(normalizedUrl);
-      hostname = urlObj.hostname;
-      pathname = urlObj.pathname + urlObj.search;
-    } catch {
-      // URL invalida
-      reasons.push('URL con formato invalido o sospechoso');
-      dangerScore += 30;
-      hostname = normalizedUrl;
-    }
-
-    // 1. Verificar si es un dominio seguro conocido
-    const isSafeDomain = safeDomains.some(safe => {
-      return hostname === safe || hostname === 'www.' + safe || hostname.endsWith('.' + safe);
-    });
-
-    if (isSafeDomain) {
-      return {
-        score: 95,
-        risk: 'Seguro',
-        color: 'emerald',
-        reasons: ['Dominio verificado y confiable']
-      };
-    }
-
-    // 2. Verificar subdominios excesivos (mas de 3 puntos)
-    const subdomainCount = (hostname.match(/\./g) || []).length;
-    if (subdomainCount > 2) {
-      reasons.push('Multiples subdominios sospechosos detectados');
-      dangerScore += 25;
-    }
-
-    // 3. Verificar palabras clave sospechosas en el dominio o ruta
-    const fullUrl = hostname + pathname;
-    const foundKeywords: string[] = [];
-    suspiciousKeywords.forEach(keyword => {
-      if (fullUrl.includes(keyword)) {
-        foundKeywords.push(keyword);
-      }
-    });
-
-    if (foundKeywords.length > 0) {
-      reasons.push(`Palabras clave sospechosas: ${foundKeywords.slice(0, 3).join(', ')}`);
-      dangerScore += Math.min(foundKeywords.length * 10, 40);
-    }
-
-    // 4. Verificar extension de dominio sospechosa
-    const hasSuspiciousExtension = suspiciousExtensions.some(ext => hostname.endsWith(ext));
-    if (hasSuspiciousExtension) {
-      reasons.push('Extension de dominio de alto riesgo');
-      dangerScore += 20;
-    }
-
-    // 5. Verificar si imita dominios conocidos (typosquatting)
-    const typosquattingPatterns = [
-      { pattern: /g[o0]{2}gle|go+gle|googl[e3]/i, brand: 'Google' },
-      { pattern: /faceb[o0]{2}k|fac[e3]book|faceb00k/i, brand: 'Facebook' },
-      { pattern: /amaz[o0]n|amazon[0-9]/i, brand: 'Amazon' },
-      { pattern: /micr[o0]s[o0]ft|microsoft[0-9]/i, brand: 'Microsoft' },
-      { pattern: /app[l1]e|apple[0-9]/i, brand: 'Apple' },
-      { pattern: /netfl[i1]x|netflix[0-9]/i, brand: 'Netflix' },
-      { pattern: /paypa[l1]|paypal[0-9]/i, brand: 'PayPal' },
-      { pattern: /bank[o0]f|[a-z]+bank/i, brand: 'Banco' }
-    ];
-
-    for (const { pattern, brand } of typosquattingPatterns) {
-      if (pattern.test(hostname) && !safeDomains.some(safe => hostname.includes(safe))) {
-        reasons.push(`Posible imitacion de ${brand} (typosquatting)`);
-        dangerScore += 35;
-        break;
-      }
-    }
-
-    // 6. Verificar caracteres sospechosos (homoglyphs)
-    // Detectar caracteres no-ASCII que podrian ser homoglyphs
-    const nonAsciiPattern = /[^\x00-\x7F]/;
-    const strippedHostname = hostname.replace(/[a-zA-Z0-9.-]/g, '');
-    if (nonAsciiPattern.test(strippedHostname)) {
-      reasons.push('Caracteres unicode sospechosos detectados');
-      dangerScore += 30;
-    }
-
-    // 7. Verificar IP directa en lugar de dominio
-    const ipPattern = /^(\d{1,3}\.){3}\d{1,3}/;
-    if (ipPattern.test(hostname)) {
-      reasons.push('Uso de direccion IP en lugar de dominio');
-      dangerScore += 25;
-    }
-
-    // 8. Verificar longitud excesiva del dominio
-    if (hostname.length > 30) {
-      reasons.push('Dominio inusualmente largo');
-      dangerScore += 15;
-    }
-
-    // 9. Verificar guiones multiples
-    if ((hostname.match(/-/g) || []).length > 2) {
-      reasons.push('Multiples guiones en el dominio');
-      dangerScore += 15;
-    }
-
-    // 10. Verificar numeros aleatorios en el dominio
-    if (/\d{4,}/.test(hostname)) {
-      reasons.push('Secuencia de numeros sospechosa en dominio');
-      dangerScore += 20;
-    }
-
-    // Calcular puntuacion final de seguridad (100 - dangerScore)
-    const securityScore = Math.max(0, Math.min(100, 100 - dangerScore));
-
-    // Determinar nivel de riesgo
-    let risk: string;
-    let color: string;
-
-    if (securityScore >= 80) {
-      risk = 'Bajo';
-      color = 'emerald';
-      if (reasons.length === 0) {
-        reasons.push('No se detectaron patrones de phishing');
-      }
-    } else if (securityScore >= 50) {
-      risk = 'Medio';
-      color = 'yellow';
-    } else if (securityScore >= 20) {
-      risk = 'Alto';
-      color = 'red';
-    } else {
-      risk = 'Critico';
-      color = 'red';
-    }
-
-    return { score: securityScore, risk, color, reasons };
-  };
 
   const [analysisReasons, setAnalysisReasons] = useState<string[]>([]);
 
@@ -604,23 +435,30 @@ function AppContent() {
 
         {/* Content Area */}
         <div className="relative z-10 p-4 sm:p-6 lg:p-8">
-          {/* Header */}
-          <div className="mb-6 lg:mb-8">
-            <h1 className="text-2xl sm:text-3xl font-bold text-white mb-2">
-              {activeSection === 'dashboard' && 'Panel Principal'}
-              {activeSection === 'history' && 'Historial de Análisis'}
-              {activeSection === 'threats' && 'Base de Datos de Amenazas'}
-              {activeSection === 'documentation' && 'Documentación'}
-              {activeSection === 'settings' && 'Configuración'}
-            </h1>
-            <p className="text-gray-400">
-              {activeSection === 'dashboard' && 'Monitorea y analiza URLs en tiempo real'}
-              {activeSection === 'history' && 'Revisa todos los análisis realizados'}
-              {activeSection === 'threats' && 'Explora amenazas conocidas y patrones de phishing'}
-              {activeSection === 'documentation' && 'Aprende como funciona la plataforma'}
-              {activeSection === 'settings' && 'Personaliza tu experiencia de seguridad'}
-            </p>
-          </div>
+          <AppPageHeader
+            title={
+              activeSection === 'dashboard'
+                ? 'Panel Principal'
+                : activeSection === 'history'
+                  ? 'Historial de Análisis'
+                  : activeSection === 'threats'
+                    ? 'Base de Datos de Amenazas'
+                    : activeSection === 'documentation'
+                      ? 'Documentación'
+                      : 'Configuración'
+            }
+            subtitle={
+              activeSection === 'dashboard'
+                ? 'Monitorea y analiza URLs en tiempo real'
+                : activeSection === 'history'
+                  ? 'Revisa todos los análisis realizados'
+                  : activeSection === 'threats'
+                    ? 'Explora amenazas conocidas y patrones de phishing'
+                    : activeSection === 'documentation'
+                      ? 'Aprende como funciona la plataforma'
+                      : 'Personaliza tu experiencia de seguridad'
+            }
+          />
 
           {activeSection === 'dashboard' && (
             <>
@@ -714,9 +552,52 @@ function AppContent() {
               </div>
 
               {/* Results Dashboard */}
-              {showResults && currentResult && (
+              {showResults && currentResult && (() => {
+                const accessStatus = getDynamicAccessStatus(currentResult);
+                const securityRecommendations = getSecurityRecommendations({
+                  score: currentResult.score,
+                  risk: currentResult.risk,
+                  color: currentResult.color,
+                  reasons: analysisReasons,
+                });
+
+                return (
                 <div className="animate-fadeIn">
                   <h3 className="text-lg sm:text-xl font-bold text-white mb-4">Resultados del Analisis</h3>
+
+                  {/* Estado de acceso dinamico segun motor de analisis */}
+                  <div
+                    className={`mb-4 sm:mb-6 rounded-xl sm:rounded-2xl border p-4 sm:p-5 backdrop-blur-sm flex items-center gap-4 transition-all duration-300 ${accessStatus.containerClasses}`}
+                    role="status"
+                    aria-live="polite"
+                  >
+                    <div className={`flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center border ${accessStatus.badgeClasses}`}>
+                      {accessStatus.permitted ? (
+                        <Unlock className={`w-6 h-6 sm:w-7 sm:h-7 ${accessStatus.iconColorClasses}`} />
+                      ) : (
+                        <Lock className={`w-6 h-6 sm:w-7 sm:h-7 ${accessStatus.iconColorClasses}`} />
+                      )}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs sm:text-sm text-gray-400 uppercase tracking-wide font-medium">
+                        Estado de acceso
+                      </p>
+                      <p className={`text-xl sm:text-2xl font-bold ${accessStatus.textClasses}`}>
+                        {accessStatus.text}
+                      </p>
+                      <p className="text-xs sm:text-sm text-gray-500 mt-1">
+                        {accessStatus.permitted
+                          ? 'El enlace cumple los criterios heurísticos de seguridad.'
+                          : 'Acceso restringido por deteccion de riesgo de phishing o fraude.'}
+                      </p>
+                    </div>
+                    <span
+                      className={`hidden sm:inline-flex px-3 py-1.5 rounded-full text-xs font-semibold border ${accessStatus.badgeClasses}`}
+                    >
+                      {accessStatus.permitted ? 'Seguro' : 'Alerta'}
+                    </span>
+                  </div>
+
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 mb-4 sm:mb-6">
                     {/* Risk Level Card */}
                     <div className={`bg-gradient-to-br from-gray-900/50 to-gray-800/30 border ${
@@ -848,57 +729,24 @@ function AppContent() {
                         Recomendaciones
                       </h3>
                       <div className="space-y-2 sm:space-y-3">
-                        {currentResult.color === 'emerald' ? (
-                          <>
-                            <div className="flex items-start gap-2 sm:gap-3">
+                        {securityRecommendations.map((recommendation, index) => (
+                          <div key={index} className="flex items-start gap-2 sm:gap-3">
+                            {currentResult.color === 'emerald' ? (
                               <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300 text-sm sm:text-base">Este sitio parece seguro para navegar</span>
-                            </div>
-                            <div className="flex items-start gap-2 sm:gap-3">
-                              <CheckCircle className="w-4 h-4 sm:w-5 sm:h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300 text-sm sm:text-base">Verifica siempre que la URL sea la oficial</span>
-                            </div>
-                          </>
-                        ) : currentResult.color === 'yellow' ? (
-                          <>
-                            <div className="flex items-start gap-2 sm:gap-3">
+                            ) : currentResult.color === 'yellow' ? (
                               <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300 text-sm sm:text-base">Procede con precaucion al navegar</span>
-                            </div>
-                            <div className="flex items-start gap-2 sm:gap-3">
-                              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300 text-sm sm:text-base">No ingreses datos personales sensibles</span>
-                            </div>
-                            <div className="flex items-start gap-2 sm:gap-3">
-                              <AlertTriangle className="w-4 h-4 sm:w-5 sm:h-5 text-yellow-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300 text-sm sm:text-base">Verifica la autenticidad del sitio</span>
-                            </div>
-                          </>
-                        ) : (
-                          <>
-                            <div className="flex items-start gap-2 sm:gap-3">
+                            ) : (
                               <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300 text-sm sm:text-base">NO navegues en este sitio</span>
-                            </div>
-                            <div className="flex items-start gap-2 sm:gap-3">
-                              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300 text-sm sm:text-base">No ingreses ninguna informacion personal</span>
-                            </div>
-                            <div className="flex items-start gap-2 sm:gap-3">
-                              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300 text-sm sm:text-base">Reporta este sitio como sospechoso</span>
-                            </div>
-                            <div className="flex items-start gap-2 sm:gap-3">
-                              <XCircle className="w-4 h-4 sm:w-5 sm:h-5 text-red-400 mt-0.5 flex-shrink-0" />
-                              <span className="text-gray-300 text-sm sm:text-base">Considera bloquear esta URL</span>
-                            </div>
-                          </>
-                        )}
+                            )}
+                            <span className="text-gray-300 text-sm sm:text-base">{recommendation}</span>
+                          </div>
+                        ))}
                       </div>
                     </div>
                   </div>
                 </div>
-              )}
+                );
+              })()}
 
               {/* Link History */}
               <div className="mt-8">
