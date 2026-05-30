@@ -7,6 +7,7 @@ import {
 } from '../lib/analysis';
 import { Sidebar } from './components/Sidebar';
 import { LoginForm } from './components/LoginForm';
+import { UpdatePasswordForm } from './components/UpdatePasswordForm';
 import { StatsCards } from './components/StatsCards';
 import { LinkHistory } from './components/LinkHistory';
 import { SecurityTips } from './components/SecurityTips';
@@ -120,7 +121,7 @@ function rowToAnalysisResult(item: HistorialRow): AnalysisResult {
 }
 
 function AppContent() {
-  const { user, isLoading: authLoading, signOut } = useAuth();
+  const { user, isLoading: authLoading, signOut, isPasswordRecovery } = useAuth();
   const [activeSection, setActiveSection] = useState('dashboard');
   const [url, setUrl] = useState('');
   const [isScanning, setIsScanning] = useState(false);
@@ -401,6 +402,11 @@ function AppContent() {
         </div>
       </div>
     );
+  }
+
+  // Show password update form when user clicked a reset link
+  if (isPasswordRecovery) {
+    return <UpdatePasswordForm />;
   }
 
   // Show login form if not authenticated

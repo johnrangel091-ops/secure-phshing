@@ -6,10 +6,12 @@ interface AuthContextType {
   user: User | null
   session: Session | null
   isLoading: boolean
+  isPasswordRecovery: boolean
   signInWithPassword: (email: string, password: string) => Promise<{ error: Error | null }>
   signUp: (email: string, password: string) => Promise<{ error: Error | null; needsConfirmation: boolean }>
   signInWithGoogle: () => Promise<{ error: Error | null }>
   signOut: () => Promise<void>
+  updatePassword: (newPassword: string) => Promise<{ error: Error | null }>
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined)
@@ -18,6 +20,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null)
   const [session, setSession] = useState<Session | null>(null)
   const [isLoading, setIsLoading] = useState(true)
+  const [isPasswordRecovery, setIsPasswordRecovery] = useState(false)
 
   useEffect(() => {
     if (!isSupabaseConfigured()) {
@@ -34,10 +37,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setIsLoading(false)
     })
 
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      setSession(session)
-      setUser(session?.user ?? null)
+    // Listen for auth changes — including PASSWORD_RECOVERY
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setIsPasswordRecovery(true)
+        setSession(session)
+        setUser(session?.user ?? null)
+      } else {
+        setIsPasswordRecovery(false)
+        setSession(session)
+        setUser(session?.user ?? null)
+      }
       setIsLoading(false)
     })
 
@@ -93,15 +103,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     await supabase.auth.signOut()
   }
 
+  const updatePassword = async (newPassword: string) => {
+    const supabase = createClient()
+    const { error } = await supabase.auth.updateUser({ password: newPassword })
+    if (!error) {
+      setIsPasswordRecovery(false)
+    }
+    return { error: error as Error | null }
+  }
+
   return (
     <AuthContext.Provider value={{
       user,
       session,
       isLoading,
+      isPasswordRecovery,
       signInWithPassword,
       signUp,
       signInWithGoogle,
       signOut,
+      updatePassword,
     }}>
       {children}
     </AuthContext.Provider>
