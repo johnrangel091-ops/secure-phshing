@@ -7,7 +7,7 @@ import {
 } from '../lib/analysis';
 import { Sidebar } from './components/Sidebar';
 import { LoginForm } from './components/LoginForm';
-import { UpdatePasswordForm } from './components/UpdatePasswordForm';
+import { AccountProfile } from './components/AccountProfile';
 import { StatsCards } from './components/StatsCards';
 import { LinkHistory } from './components/LinkHistory';
 import { SecurityTips } from './components/SecurityTips';
@@ -123,6 +123,14 @@ function rowToAnalysisResult(item: HistorialRow): AnalysisResult {
 function AppContent() {
   const { user, isLoading: authLoading, signOut, isPasswordRecovery } = useAuth();
   const [activeSection, setActiveSection] = useState('dashboard');
+
+  // Cuando el usuario entra via enlace de recuperacion, redirigir a Mi Cuenta
+  useEffect(() => {
+    if (isPasswordRecovery && user) {
+      setActiveSection('account');
+    }
+  }, [isPasswordRecovery, user]);
+
   const [url, setUrl] = useState('');
   const [isScanning, setIsScanning] = useState(false);
   const [showResults, setShowResults] = useState(false);
@@ -404,11 +412,6 @@ function AppContent() {
     );
   }
 
-  // Show password update form when user clicked a reset link
-  if (isPasswordRecovery) {
-    return <UpdatePasswordForm />;
-  }
-
   // Show login form if not authenticated
   if (!user) {
     return <LoginForm />;
@@ -451,7 +454,9 @@ function AppContent() {
                     ? 'Base de Datos de Amenazas'
                     : activeSection === 'documentation'
                       ? 'Documentación'
-                      : 'Configuración'
+                      : activeSection === 'account'
+                        ? 'Mi Cuenta'
+                        : 'Configuración'
             }
             subtitle={
               activeSection === 'dashboard'
@@ -462,7 +467,9 @@ function AppContent() {
                     ? 'Explora amenazas conocidas y patrones de phishing'
                     : activeSection === 'documentation'
                       ? 'Aprende como funciona la plataforma'
-                      : 'Personaliza tu experiencia de seguridad'
+                      : activeSection === 'account'
+                        ? 'Administra tu perfil y seguridad'
+                        : 'Personaliza tu experiencia de seguridad'
             }
           />
 
@@ -908,6 +915,10 @@ function AppContent() {
               onClearHistory={handleClearHistory}
               onThemeChange={handleThemeChange}
             />
+          )}
+
+          {activeSection === 'account' && (
+            <AccountProfile isFromRecovery={isPasswordRecovery} />
           )}
         </div>
       </main>
