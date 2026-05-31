@@ -578,38 +578,70 @@ function AppContent() {
                 <div className="animate-fadeIn">
                   <h3 className="text-lg sm:text-xl font-bold text-white mb-4">Resultados del Analisis</h3>
 
-                  {/* Estado de acceso dinamico segun motor de analisis */}
-                  <div
-                    className={`mb-4 sm:mb-6 rounded-xl sm:rounded-2xl border p-4 sm:p-5 backdrop-blur-sm flex items-center gap-4 transition-all duration-300 ${accessStatus.containerClasses}`}
-                    role="status"
-                    aria-live="polite"
-                  >
-                    <div className={`flex-shrink-0 w-12 h-12 sm:w-14 sm:h-14 rounded-full flex items-center justify-center border ${accessStatus.badgeClasses}`}>
-                      {accessStatus.permitted ? (
-                        <Unlock className={`w-6 h-6 sm:w-7 sm:h-7 ${accessStatus.iconColorClasses}`} />
-                      ) : (
-                        <Lock className={`w-6 h-6 sm:w-7 sm:h-7 ${accessStatus.iconColorClasses}`} />
-                      )}
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs sm:text-sm text-gray-400 uppercase tracking-wide font-medium">
-                        Estado de acceso
-                      </p>
-                      <p className={`text-xl sm:text-2xl font-bold ${accessStatus.textClasses}`}>
-                        {accessStatus.text}
-                      </p>
-                      <p className="text-xs sm:text-sm text-gray-500 mt-1">
-                        {accessStatus.permitted
-                          ? 'El enlace cumple los criterios heurísticos de seguridad.'
-                          : 'Acceso restringido por deteccion de riesgo de phishing o fraude.'}
-                      </p>
-                    </div>
-                    <span
-                      className={`hidden sm:inline-flex px-3 py-1.5 rounded-full text-xs font-semibold border ${accessStatus.badgeClasses}`}
+                  {/* Estado de acceso — banner principal de veredicto */}
+                  {accessStatus.permitted ? (
+                    <div
+                      className="mb-4 sm:mb-6 relative overflow-hidden rounded-xl sm:rounded-2xl border-2 border-emerald-500/60 bg-gradient-to-r from-emerald-950/80 via-emerald-900/50 to-emerald-950/80 p-5 sm:p-6 backdrop-blur-xl"
+                      role="status"
+                      aria-live="polite"
                     >
-                      {accessStatus.permitted ? 'Seguro' : 'Alerta'}
-                    </span>
-                  </div>
+                      <div className="absolute inset-0 bg-emerald-500/5 pointer-events-none" />
+                      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-emerald-400 to-transparent" />
+                      <div className="relative flex items-center gap-4 sm:gap-5">
+                        <div className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-emerald-500/20 border-2 border-emerald-500/50 flex items-center justify-center shadow-lg shadow-emerald-500/20">
+                          <CheckCircle className="w-8 h-8 sm:w-9 sm:h-9 text-emerald-400" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-emerald-400/70 uppercase tracking-widest font-semibold mb-0.5">
+                            Estado de Acceso
+                          </p>
+                          <p className="text-2xl sm:text-3xl font-extrabold text-emerald-400 tracking-tight">
+                            ACCESO PERMITIDO
+                          </p>
+                          <p className="text-xs sm:text-sm text-emerald-400/60 mt-1">
+                            El enlace cumple los criterios de seguridad. Puedes proceder con confianza.
+                          </p>
+                        </div>
+                        <div className="hidden sm:flex flex-col items-end gap-2">
+                          <span className="px-4 py-1.5 rounded-full text-sm font-bold bg-emerald-500/25 border border-emerald-500/50 text-emerald-300">
+                            ✓ Seguro
+                          </span>
+                          <span className="text-xs text-emerald-400/50">Score: {currentResult.score}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  ) : (
+                    <div
+                      className="mb-4 sm:mb-6 relative overflow-hidden rounded-xl sm:rounded-2xl border-2 border-red-500/70 bg-gradient-to-r from-red-950/90 via-red-900/60 to-red-950/90 p-5 sm:p-6 backdrop-blur-xl"
+                      role="alert"
+                      aria-live="assertive"
+                    >
+                      <div className="absolute inset-0 bg-red-500/5 pointer-events-none animate-pulse" />
+                      <div className="absolute top-0 left-0 right-0 h-0.5 bg-gradient-to-r from-transparent via-red-500 to-transparent" />
+                      <div className="relative flex items-center gap-4 sm:gap-5">
+                        <div className="flex-shrink-0 w-14 h-14 sm:w-16 sm:h-16 rounded-2xl bg-red-500/20 border-2 border-red-500/60 flex items-center justify-center shadow-lg shadow-red-500/30">
+                          <AlertTriangle className="w-8 h-8 sm:w-9 sm:h-9 text-red-400 animate-pulse" />
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="text-xs text-red-400/70 uppercase tracking-widest font-semibold mb-0.5">
+                            ⚠ Alerta de Seguridad
+                          </p>
+                          <p className="text-2xl sm:text-3xl font-extrabold text-red-400 tracking-tight">
+                            ACCESO BLOQUEADO
+                          </p>
+                          <p className="text-xs sm:text-sm text-red-400/70 mt-1">
+                            Phishing o fraude detectado. No compartas datos personales en este enlace.
+                          </p>
+                        </div>
+                        <div className="hidden sm:flex flex-col items-end gap-2">
+                          <span className="px-4 py-1.5 rounded-full text-sm font-bold bg-red-500/25 border border-red-500/50 text-red-300">
+                            ⚠ Peligro
+                          </span>
+                          <span className="text-xs text-red-400/50">Score: {currentResult.score}%</span>
+                        </div>
+                      </div>
+                    </div>
+                  )}
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6 mb-4 sm:mb-6">
                     {/* Risk Level Card */}

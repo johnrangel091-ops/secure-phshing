@@ -129,16 +129,17 @@ export function LinkHistory({ history, onBlock, isLoading = false }: LinkHistory
                       >
                         {item.estado}
                       </span>
-                      <span
-                        className={`inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold border ${acceso.classes}`}
-                      >
-                        {accessStatus.permitted ? (
+                      {accessStatus.permitted ? (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-emerald-500/20 text-emerald-300 border-emerald-500/50">
                           <Unlock className="w-3 h-3" />
-                        ) : (
+                          Permitido
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border bg-red-500/20 text-red-300 border-red-500/50">
                           <Lock className="w-3 h-3" />
-                        )}
-                        {acceso.text}
-                      </span>
+                          Bloqueado
+                        </span>
+                      )}
                     </div>
 
                     <div className="flex gap-2 pt-1 border-t border-slate-800">
@@ -222,16 +223,17 @@ export function LinkHistory({ history, onBlock, isLoading = false }: LinkHistory
                           </span>
                         </td>
                         <td className="px-6 py-4">
-                          <span
-                            className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold border ${acceso.classes}`}
-                          >
-                            {accessStatus.permitted ? (
+                          {accessStatus.permitted ? (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border bg-emerald-500/20 text-emerald-300 border-emerald-500/50">
                               <Unlock className="w-3.5 h-3.5" />
-                            ) : (
+                              Permitido
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border bg-red-500/20 text-red-300 border-red-500/50">
                               <Lock className="w-3.5 h-3.5" />
-                            )}
-                            {acceso.text}
-                          </span>
+                              Bloqueado
+                            </span>
+                          )}
                         </td>
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-center gap-2">
@@ -310,11 +312,17 @@ export function LinkHistory({ history, onBlock, isLoading = false }: LinkHistory
                 >
                   {selectedItem.estado}
                 </span>
-                <span
-                  className={`inline-flex px-3 py-1 rounded-full text-xs font-semibold border ${accesoLabel(selectedItem).classes}`}
-                >
-                  {accesoLabel(selectedItem).text}
-                </span>
+                {getDynamicAccessStatus(selectedItem).permitted ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border bg-emerald-500/20 text-emerald-300 border-emerald-500/50">
+                    <Unlock className="w-3.5 h-3.5" />
+                    ACCESO PERMITIDO
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border bg-red-500/20 text-red-300 border-red-500/50">
+                    <Lock className="w-3.5 h-3.5" />
+                    ACCESO BLOQUEADO
+                  </span>
+                )}
               </div>
               <p className="text-slate-500 text-xs">
                 Nivel interno: {selectedItem.risk} · Score {selectedItem.score}%
