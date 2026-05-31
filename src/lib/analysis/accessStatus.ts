@@ -42,11 +42,11 @@ export function getDynamicAccessStatus(input: AccessStatusInput): DynamicAccessS
   if (permitted) {
     return {
       permitted: true,
-      text: 'Acceso: Permitido',
+      text: 'ACCESO PERMITIDO',
       shortText: 'Permitido',
       containerClasses:
-        'bg-gradient-to-r from-emerald-950/40 to-emerald-900/20 border-emerald-500/40',
-      badgeClasses: 'bg-emerald-500/15 text-emerald-400 border-emerald-500/30',
+        'bg-gradient-to-r from-emerald-950/70 via-emerald-900/40 to-emerald-950/70 border-emerald-500/60',
+      badgeClasses: 'bg-emerald-500/25 text-emerald-300 border-emerald-500/50',
       textClasses: 'text-emerald-400',
       iconColorClasses: 'text-emerald-400',
     };
@@ -54,11 +54,11 @@ export function getDynamicAccessStatus(input: AccessStatusInput): DynamicAccessS
 
   return {
     permitted: false,
-    text: 'Acceso: Bloqueado',
+    text: 'ACCESO BLOQUEADO',
     shortText: 'Bloqueado',
     containerClasses:
-      'bg-gradient-to-r from-red-950/50 to-red-900/20 border-red-500/40',
-    badgeClasses: 'bg-red-500/15 text-red-400 border-red-500/30',
+      'bg-gradient-to-r from-red-950/80 via-red-900/50 to-red-950/80 border-red-500/70',
+    badgeClasses: 'bg-red-500/25 text-red-300 border-red-500/50',
     textClasses: 'text-red-400',
     iconColorClasses: 'text-red-400',
   };
